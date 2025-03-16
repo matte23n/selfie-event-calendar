@@ -4,12 +4,18 @@ import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
+import { BrowserRouter, Routes, Route } from "react-router";
+import Login from './Login';
+import Signup from './Signup';
+import Home from './Home';
 
 function App() {
   return (
-    <div className='h-screen flex items-center justify-center /*bg-amber-400*/'>
-      <MyCalendar />
-    </div>
+    <Routes>
+        <Route path="/login" element={<Login/>} />
+        <Route path="/signup" element={<Signup/>} />
+        <Route path="/" element={<Home/>} />
+    </Routes>
   );
 }
 

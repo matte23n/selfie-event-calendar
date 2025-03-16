@@ -107,7 +107,7 @@ export default function MyCalendar() {
     )
 
 
-    return <> <DnDCalendar
+    return <> {/* <DnDCalendar
         localizer={myLocalizer}
         events={myEvents}
         draggableAccessor={(event) => true}
@@ -115,7 +115,7 @@ export default function MyCalendar() {
         className='m-auto'
         components={{ toolbar: CustomToolbar }}
         onSelectEvent={(event) => { setOpenedDialog(true); setSelectedEvent(event) }}
-    />
+    /> */}
         {selectedEvent && <EventInfoDialog open={openedDialog} onClose={() => { setOpenedDialog(false); }} event={selectedEvent} />}
     </>
 }
