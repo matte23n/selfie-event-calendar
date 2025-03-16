@@ -1,6 +1,6 @@
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Slide } from "@mui/material";
 import { useEffect, useState } from "react";
-import { CalendarEvent } from "./MyCalendar";
+import { CalendarEvent } from "./Calendar";
 import React from "react";
 import { TransitionProps } from "@mui/material/transitions";
 
