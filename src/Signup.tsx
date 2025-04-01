@@ -1,14 +1,48 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Container, TextField, Button, Typography } from '@mui/material';
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
+import axiosInstance from './api/axiosInstance';
 
 const Signup: React.FC = () => {
+    const [formData, setFormData] = useState({
+        username: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+    });
+    const [error, setError] = useState('');
+    const navigate = useNavigate();
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSignup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        try {
+            const response = await axiosInstance.post('/signup', formData);
+
+            localStorage.setItem('isAuthenticated', 'true');
+            localStorage.setItem('user', JSON.stringify(response.data.user));
+            navigate('/');
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'An error occurred. Please try again.');
+        }
+    };
+
     return (
         <Container maxWidth="xs">
             <Typography variant="h4" component="h2" gutterBottom>
                 Signup
             </Typography>
-            <form action="/signup" method="post">
+            {error && (
+                <Typography variant="body2" color="error" align="center">
+                    {error}
+                </Typography>
+            )}
+            <form onSubmit={handleSignup}>
                 <TextField
                     label="Username"
                     name="username"
@@ -16,6 +50,8 @@ const Signup: React.FC = () => {
                     margin="normal"
                     fullWidth
                     required
+                    value={formData.username}
+                    onChange={handleChange}
                 />
                 <TextField
                     label="Password"
@@ -25,6 +61,8 @@ const Signup: React.FC = () => {
                     margin="normal"
                     fullWidth
                     required
+                    value={formData.password}
+                    onChange={handleChange}
                 />
                 <TextField
                     label="First Name"
@@ -33,6 +71,8 @@ const Signup: React.FC = () => {
                     margin="normal"
                     fullWidth
                     required
+                    value={formData.firstName}
+                    onChange={handleChange}
                 />
                 <TextField
                     label="Last Name"
@@ -41,6 +81,8 @@ const Signup: React.FC = () => {
                     margin="normal"
                     fullWidth
                     required
+                    value={formData.lastName}
+                    onChange={handleChange}
                 />
                 <Button type="submit" variant="contained" color="primary" fullWidth>
                     Signup
