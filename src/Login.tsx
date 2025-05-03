@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Container, TextField, Button, Typography } from '@mui/material';
 import { Link, useNavigate } from "react-router";
 import axiosInstance from './api/axiosInstance';
+import { useAuth } from './AuthProvider';
 
 const Login: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -15,9 +17,7 @@ const Login: React.FC = () => {
 
         try {
             const response = await axiosInstance.post('/login', { username, password });
-
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('user', JSON.stringify(response.data.user));
+            login(response.data.token); // Store the token in AuthProvider
             navigate('/');
         } catch (err: any) {
             setError(err.response?.data?.message || 'An error occurred. Please try again.');

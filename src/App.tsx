@@ -13,22 +13,17 @@ import Pomodoro from './Pomodoro';
 import Note from './Note';
 import Progetti from './Progetti';
 import MyCalendar from './Calendar';
+import { useAuth } from './AuthProvider';
 
 const App: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
-  useEffect(() => {
-    // Example: Replace this with your actual authentication logic
-    const authStatus = localStorage.getItem("isAuthenticated") === "true";
-    setIsAuthenticated(authStatus);
-  }, []);
-
-  useEffect(() => {
+  /*useEffect(() => {
     // Aggiorna le view in base alla nuova data e ora
-  }, [currentTime]);
+  }, [currentTime]);*/
 
   const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+    const { isAuthenticated } = useAuth();
     return isAuthenticated ? children : <Navigate to="/login" />;
   };
 
@@ -41,9 +36,7 @@ const App: React.FC = () => {
         <Route
           path="/calendario"
           element={
-            <ProtectedRoute>
-              <MyCalendar />
-            </ProtectedRoute>
+            <MyCalendar />
           }
         />
         <Route
