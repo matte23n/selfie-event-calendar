@@ -14,11 +14,12 @@ const TimeMachineControl: React.FC = () => {
   };
 
   return (
-    <div style={{ backgroundColor: 'yellow', padding: '10px' }}>
+    <div style={{ padding: '10px'}}>
       <input
         type="datetime-local"
         value={date}
         onChange={handleChange}
+        style={{ marginRight: '10px' }} // Add margin between input and button
       />
       <button onClick={handleReset}>Reset to System Time</button>
     </div>

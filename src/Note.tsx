@@ -1,46 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Container, Grid2 as Grid, Box, TextField, Typography, Card, CardContent, CardActions, MenuItem, Select, Chip, Autocomplete } from '@mui/material';
+import { Button, Container, Grid2 as Grid, Box, TextField, Typography, Card, CardContent, CardActions, MenuItem, Select, Autocomplete } from '@mui/material';
 import { marked } from 'marked';
 import axiosInstance from './api/axiosInstance'; // Import axiosInstance
-
-interface Note {
-  _id: string; // Updated to match MongoDB's default ID field
-  title: string;
-  content: string;
-  categories: string[];
-}
+import { Note as NoteType } from './types/models';
 
 const Note = () => {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [newNote, setNewNote] = useState({ title: '', content: '', categories: [] });
+  const [notes, setNotes] = useState<NoteType[]>([]);
+  const [newNote, setNewNote] = useState<Partial<NoteType>>({ 
+    title: '', 
+    content: '', 
+    categories: [],
+    category: '' 
+  });
   const [sortOption, setSortOption] = useState<string>('title');
-  const [categoryInput, setCategoryInput] = useState<string>(''); // Input for free category
+  const [sortOrder, setSortOrder] = useState<string>('asc'); // New state for sort order
+
+  const fetchNotes = async () => {
+    try {
+      const { data } = await axiosInstance.get<NoteType[]>('/notes', {
+        params: { sortField: sortOption, sortOrder },
+      });
+      setNotes(data);
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+    }
+  };
 
   useEffect(() => {
-    // Fetch notes from the backend
-    const fetchNotes = async () => {
-      try {
-        const { data } = await axiosInstance.get('/notes'); // Use axiosInstance
-        setNotes(data);
-      } catch (error) {
-        console.error('Error fetching notes:', error);
-      }
-    };
     fetchNotes();
-  }, []);
+  }, [sortOption, sortOrder]); // Refetch notes when sort option or order changes
+
+  const handleSortChange = (field: string) => {
+    if (sortOption === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); // Toggle sort order
+    } else {
+      setSortOption(field);
+      setSortOrder('asc'); // Default to ascending order
+    }
+  };
 
   const addNote = async () => {
     try {
-      const noteToInsert = {
-        title: newNote.title,
-        content: newNote.content,
-        categories: newNote.categories,
+      const noteToInsert: NoteType = {
+        title: newNote.title || '',
+        category: newNote.category || '',
+        content: newNote.content || '',
         creation: new Date().toISOString(),
         lastMod: new Date().toISOString(),
-      }
+        categories: newNote.categories || []
+      };
       const { data } = await axiosInstance.post('/notes', noteToInsert);
-      setNotes([...notes, { _id: data.insertedId, ...noteToInsert, }]);
-      setNewNote({ title: '', content: '', categories: [] });
+      setNotes([...notes, { _id: data.insertedId, ...noteToInsert }]);
+      setNewNote({ title: '', content: '', categories: [], category: '' });
     } catch (error) {
       console.error('Error adding note:', error);
     }
@@ -59,7 +70,7 @@ const Note = () => {
     }
   };
 
-  const duplicateNote = async (noteToDuplicate: Note) => {
+  const duplicateNote = async (noteToDuplicate: NoteType) => {
     const { data } = await axiosInstance.post('/notes/duplicate', noteToDuplicate);
     setNotes([...notes, { ...data.duplicatedNote }]);
   };
@@ -110,12 +121,12 @@ const Note = () => {
           <Typography variant="subtitle1">Sort by:</Typography>
           <Select
             value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
+            onChange={(e) => handleSortChange(e.target.value)}
             displayEmpty
           >
             <MenuItem value="title">Title</MenuItem>
-            <MenuItem value="date">Date</MenuItem>
-            <MenuItem value="length">Content Length</MenuItem>
+            <MenuItem value="creation">Creation Date</MenuItem>
+            <MenuItem value="contentLength">Content Length</MenuItem>
           </Select>
         </Box>
       </Box>
@@ -131,7 +142,7 @@ const Note = () => {
               </CardContent>
               <CardActions>
                 <Button size="small" onClick={() => duplicateNote(note)}>Duplicate</Button>
-                <Button size="small" onClick={() => deleteNote(note._id)}>Delete</Button>
+                <Button size="small" onClick={() => deleteNote(note._id!)}>Delete</Button>
                 <Button size="small" onClick={() => copyNoteContent(note.content)}>Copy</Button>
               </CardActions>
             </Card>

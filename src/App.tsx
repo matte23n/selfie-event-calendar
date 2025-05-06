@@ -4,6 +4,7 @@ import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import { Routes, Route, Navigate } from "react-router";
+import Navbar from './components/Navbar'; // Import Navbar
 import Login from './Login';
 import Signup from './Signup';
 import Home from './Home';
@@ -16,7 +17,7 @@ import MyCalendar from './Calendar';
 import { useAuth } from './AuthProvider';
 
 const App: React.FC = () => {
-  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
   /*useEffect(() => {
     // Aggiorna le view in base alla nuova data e ora
@@ -29,7 +30,7 @@ const App: React.FC = () => {
 
   return (
     <div>
-      <TimeMachineControl />
+      <Navbar /> {/* Navbar now includes TimeMachineControl */}
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
