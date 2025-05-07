@@ -14,7 +14,9 @@ import Pomodoro from './Pomodoro';
 import Note from './Note';
 import Progetti from './Progetti';
 import MyCalendar from './Calendar';
-import { useAuth } from './AuthProvider';
+import { AuthProvider, useAuth } from './AuthProvider';
+import { CalendarProvider } from './CalendarContext';
+import { DialogProvider } from './DialogProvider';
 
 const App: React.FC = () => {
 const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -29,51 +31,57 @@ const [currentTime, setCurrentTime] = useState<Date>(new Date());
   };
 
   return (
-    <div>
-      <Navbar /> {/* Navbar now includes TimeMachineControl */}
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route
-          path="/calendario"
-          element={
-            <MyCalendar />
-          }
-        />
-        <Route
-          path="/pomodoro"
-          element={
-            <ProtectedRoute>
-              <Pomodoro />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/note"
-          element={
-            <ProtectedRoute>
-              <Note />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/progetti"
-          element={
-            <ProtectedRoute>
-              <Progetti />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </div>
+    <AuthProvider>
+      <CalendarProvider>
+          <DialogProvider>
+        <div>
+          <Navbar /> {/* Navbar now includes TimeMachineControl */}
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route
+              path="/calendario"
+              element={
+                <MyCalendar />
+              }
+            />
+            <Route
+              path="/pomodoro"
+              element={
+                <ProtectedRoute>
+                  <Pomodoro />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/note"
+              element={
+                <ProtectedRoute>
+                  <Note />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/progetti"
+              element={
+                <ProtectedRoute>
+                  <Progetti />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </div>
+          </DialogProvider>
+      </CalendarProvider>
+    </AuthProvider>
   );
 };
 
