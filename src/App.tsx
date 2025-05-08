@@ -8,8 +8,7 @@ import Navbar from './components/Navbar'; // Import Navbar
 import Login from './Login';
 import Signup from './Signup';
 import Home from './Home';
-import React, { useEffect, useState } from 'react';
-import TimeMachineControl from './components/TimeMachineControl';
+import React, { useState } from 'react';
 import Pomodoro from './Pomodoro';
 import Note from './Note';
 import Progetti from './Progetti';
