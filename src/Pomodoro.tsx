@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Container, Grid2 as Grid, Box, TextField, Typography } from '@mui/material';
 import './Pomodoro.css';
+import axiosInstance from './api/axiosInstance';
 
 interface cycle {
   study: number;
@@ -15,6 +16,21 @@ const Pomodoro = () => {
   const [currentCycle, setCurrentCycle] = useState(0);
   const [isStudying, setIsStudying] = useState(true);
   const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
+  const [pomodoroHistory, setPomodoroHistory] = useState<any[]>([]);
+
+  // Fetch pomodoro history on component mount
+  useEffect(() => {
+    fetchPomodoroHistory();
+  }, []);
+
+  const fetchPomodoroHistory = async () => {
+    try {
+      const response = await axiosInstance.get('/pomodoros');
+      setPomodoroHistory(response.data);
+    } catch (error) {
+      console.error('Error fetching pomodoro history:', error);
+    }
+  };
 
   const calculateCycles = () => {
     let totalMinutes = parseInt(totalTime);
@@ -43,19 +59,42 @@ const Pomodoro = () => {
         startCycle();
       }, time * 60000));
     } else {
+      // Save completed pomodoro to backend
+      savePomodoroSession();
       alert('All cycles completed!');
     }
   };
 
+  const savePomodoroSession = async () => {
+    try {
+      const totalStudyTime = cycles.reduce((acc, cycle) => acc + cycle.study, 0);
+      const totalBreakTime = cycles.reduce((acc, cycle) => acc + cycle.break, 0);
+      
+      const pomodoroData = {
+        studyTime,
+        breakTime,
+        totalTime: totalStudyTime + totalBreakTime,
+        completed: currentCycle >= cycles.length,
+        timestamp: new Date().toISOString()
+      };
+      
+      await axiosInstance.post('/pomodoros', pomodoroData);
+      fetchPomodoroHistory(); // Refresh history
+    } catch (error) {
+      console.error('Error saving pomodoro session:', error);
+    }
+  };
+
   const resetCycle = () => {
-    clearTimeout(timer!);
+    if (timer) clearTimeout(timer);
     setCurrentCycle(0);
     setIsStudying(true);
   };
 
   const endCycle = () => {
-    clearTimeout(timer!);
+    if (timer) clearTimeout(timer);
     setCurrentCycle(cycles.length);
+    savePomodoroSession();
   };
 
   useEffect(() => {
@@ -94,6 +133,7 @@ const Pomodoro = () => {
         />
         <Button variant="contained" color="primary" onClick={calculateCycles}>Calculate Cycles</Button>
       </Box>
+      
       <Grid container spacing={2}>
         <Grid>
           <Button variant="contained" color="primary" onClick={startCycle}>Start Cycle</Button>
@@ -101,6 +141,37 @@ const Pomodoro = () => {
           <Button variant="contained" color="error" onClick={endCycle}>End Cycle</Button>
         </Grid>
       </Grid>
+      
+      {/* Pomodoro History Section */}
+      <Box mt={4}>
+        <Typography variant="h5" gutterBottom>Pomodoro History</Typography>
+        {pomodoroHistory.length > 0 ? (
+          <Box>
+            {pomodoroHistory.map((session, index) => (
+              <Box 
+                key={index} 
+                p={2} 
+                mb={2} 
+                border="1px solid #ddd" 
+                borderRadius={1}
+                bgcolor={session.completed ? "#e8f5e9" : "#fff3e0"}
+              >
+                <Typography variant="body1">
+                  {new Date(session.timestamp).toLocaleString()}
+                </Typography>
+                <Typography variant="body2">
+                  Study: {session.studyTime} mins, Break: {session.breakTime} mins
+                </Typography>
+                <Typography variant="body2">
+                  Status: {session.completed ? "Completed" : "Incomplete"}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        ) : (
+          <Typography variant="body1">No pomodoro sessions recorded yet.</Typography>
+        )}
+      </Box>
     </Container>
   );
 };
