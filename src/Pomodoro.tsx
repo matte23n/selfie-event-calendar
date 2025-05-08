@@ -17,6 +17,7 @@ const Pomodoro = () => {
   const [isStudying, setIsStudying] = useState(true);
   const [timer, setTimer] = useState<NodeJS.Timeout | null>(null);
   const [pomodoroHistory, setPomodoroHistory] = useState<any[]>([]);
+  const [isActive, setIsActive] = useState(false);
 
   // Fetch pomodoro history on component mount
   useEffect(() => {
@@ -49,6 +50,7 @@ const Pomodoro = () => {
   };
 
   const startCycle = () => {
+    setIsActive(true);
     if (currentCycle < cycles.length) {
       const time = isStudying ? cycles[currentCycle].study : cycles[currentCycle].break;
       setTimer(setTimeout(() => {
@@ -61,6 +63,7 @@ const Pomodoro = () => {
     } else {
       // Save completed pomodoro to backend
       savePomodoroSession();
+      setIsActive(false);
       alert('All cycles completed!');
     }
   };
@@ -89,12 +92,14 @@ const Pomodoro = () => {
     if (timer) clearTimeout(timer);
     setCurrentCycle(0);
     setIsStudying(true);
+    setIsActive(false);
   };
 
   const endCycle = () => {
     if (timer) clearTimeout(timer);
     setCurrentCycle(cycles.length);
     savePomodoroSession();
+    setIsActive(false);
   };
 
   useEffect(() => {
@@ -105,8 +110,13 @@ const Pomodoro = () => {
   }, [currentCycle, isStudying]);
 
   return (
-    <Container maxWidth="sm">
-      <Box mb={4} className={isStudying ? 'study-animation' : 'break-animation'}>
+    <Grid 
+      container
+      className={isActive ? (isStudying ? 'study-animation' : 'break-animation') : ''}
+      sx={{ minHeight: '100vh', padding: 3 }}
+    >
+      <Grid sx={{ mr: 'auto', ml: 'auto' }} maxWidth={'sm'}>
+      <Box mb={4}>
         <Typography variant="h4" gutterBottom>Pomodoro Timer</Typography>
         <TextField
           label="Study Time (minutes)"
@@ -172,7 +182,8 @@ const Pomodoro = () => {
           <Typography variant="body1">No pomodoro sessions recorded yet.</Typography>
         )}
       </Box>
-    </Container>
+      </Grid>
+    </Grid>
   );
 };
 
