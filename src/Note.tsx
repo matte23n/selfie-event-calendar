@@ -4,6 +4,13 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { marked } from 'marked';
 import axiosInstance from './api/axiosInstance'; // Import axiosInstance
 import { Note as NoteType } from './types/models';
+import DOMPurify from 'dompurify';
+
+// Configure marked options for safe rendering with proper heading rendering
+marked.setOptions({
+  breaks: true, // Convert line breaks to <br>
+  gfm: true, // Enable GitHub Flavored Markdown
+});
 
 const Note = () => {
   const [notes, setNotes] = useState<NoteType[]>([]);
@@ -143,6 +150,22 @@ const Note = () => {
     setSelectedNoteForDialog(null);
   };
 
+  // Add state to toggle between markdown preview and edit mode
+  const [previewMode, setPreviewMode] = useState(false);
+
+  // Function to safely render markdown, ensuring titles with hashtags work
+  const renderMarkdown = (content: string) => {
+    const sanitizedHtml = DOMPurify.sanitize(
+      marked(content, { async: false }),
+      { 
+        ADD_ATTR: ['id'], // Allow id attributes for header anchors
+        FORBID_TAGS: ['script', 'iframe', 'form'], // Prevent dangerous tags
+        FORBID_ATTR: ['style', 'onerror', 'onload'] // Prevent dangerous attributes
+      }
+    );
+    return sanitizedHtml;
+  };
+
   return (
     <Container maxWidth="lg">
       <Box mb={4}>
@@ -162,23 +185,71 @@ const Note = () => {
           error={Boolean(errors.title)}
           helperText={errors.title}
         />
-        <TextField
-          label="Content"
-          value={newNote.content}
-          onChange={(e) => {
-            setNewNote({ ...newNote, content: e.target.value });
-            // Clear error when user starts typing
-            if (errors.content && e.target.value.trim() !== '') {
-              setErrors({ ...errors, content: undefined });
-            }
-          }}
-          fullWidth
-          multiline
-          rows={4}
-          margin="normal"
-          error={Boolean(errors.content)}
-          helperText={errors.content}
-        />
+        
+        {/* Add a toggle for preview mode */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+          <Typography variant="subtitle1">Content (Markdown supported)</Typography>
+          <Button 
+            size="small" 
+            onClick={() => setPreviewMode(!previewMode)}
+          >
+            {previewMode ? 'Edit' : 'Preview'}
+          </Button>
+        </Box>
+        
+        {previewMode ? (
+          // Markdown preview - Updated to use the safe rendering function
+          <Box 
+            sx={{ 
+              border: '1px solid #ccc', 
+              borderRadius: 1, 
+              p: 2, 
+              minHeight: '150px',
+              mb: 2,
+              bgcolor: '#f8f9fa',
+              '& h1': { fontSize: '2em', marginTop: '0.67em', marginBottom: '0.67em', fontWeight: 'bold' },
+              '& h2': { fontSize: '1.5em', marginTop: '0.83em', marginBottom: '0.83em', fontWeight: 'bold' },
+              '& h3': { fontSize: '1.17em', marginTop: '1em', marginBottom: '1em', fontWeight: 'bold' },
+              '& h4': { fontSize: '1em', marginTop: '1.33em', marginBottom: '1.33em', fontWeight: 'bold' },
+              '& h5': { fontSize: '0.83em', marginTop: '1.67em', marginBottom: '1.67em', fontWeight: 'bold' },
+              '& h6': { fontSize: '0.67em', marginTop: '2.33em', marginBottom: '2.33em', fontWeight: 'bold' },
+            }}
+          >
+            {newNote.content ? (
+              <div 
+                className="markdown-preview"
+                dangerouslySetInnerHTML={{ 
+                  __html: renderMarkdown(newNote.content || '')
+                }} 
+              />
+            ) : (
+              <Typography color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                No content to preview
+              </Typography>
+            )}
+          </Box>
+        ) : (
+          // Edit mode
+          <TextField
+            label="Content"
+            value={newNote.content}
+            onChange={(e) => {
+              setNewNote({ ...newNote, content: e.target.value });
+              // Clear error when user starts typing
+              if (errors.content && e.target.value.trim() !== '') {
+                setErrors({ ...errors, content: undefined });
+              }
+            }}
+            fullWidth
+            multiline
+            rows={6}
+            margin="normal"
+            error={Boolean(errors.content)}
+            helperText={errors.content || "Supports Markdown formatting (# headers, **bold**, *italic*, etc.)"}
+            placeholder="# Title\n\n**Bold text** and *italic text*\n\n- List item\n- Another item\n\n1. Numbered item\n2. Second item\n\n```\nCode block\n```"
+          />
+        )}
+        
         <Autocomplete
           multiple
           freeSolo
@@ -217,6 +288,7 @@ const Note = () => {
           </Select>
         </Box>
       </Box>
+      
       <Grid container spacing={2}>
         {notes.map(note => (
           <Grid key={note._id} size={{ xs: 12, sm: 6, md: 4 }}>
@@ -257,23 +329,50 @@ const Note = () => {
                     WebkitBoxOrient: 'vertical',
                     mb: 2,
                     flex: 1,
-                    position: 'relative'
+                    position: 'relative',
+                    '& img': {
+                      maxWidth: '100%',
+                      height: 'auto'
+                    },
+                    '& code': {
+                      backgroundColor: 'rgba(0,0,0,0.05)',
+                      padding: '2px 4px',
+                      borderRadius: '3px',
+                      fontFamily: 'monospace'
+                    },
+                    '& pre': {
+                      backgroundColor: 'rgba(0,0,0,0.05)',
+                      padding: '8px',
+                      borderRadius: '3px',
+                      overflow: 'auto',
+                      '& code': {
+                        backgroundColor: 'transparent',
+                        padding: 0
+                      }
+                    },
                   }}
                 >
-                  <Typography variant="body2" color="text.secondary" sx={{ wordBreak: "break-word" }}>
-                    <div dangerouslySetInnerHTML={{ __html: marked(note.content.substring(0, 200), { async: false }) }} />
-                  </Typography>
-                  <Box 
-                    sx={{ 
-                      position: 'absolute', 
-                      bottom: 0, 
-                      right: 0,
-                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                      px: 1,
-                      borderRadius: '4px'
-                    }}
-                  >
-                  </Box>
+                  {/* Render markdown as HTML */}
+                  <div 
+                    className="markdown-card-content"
+                    dangerouslySetInnerHTML={{ 
+                      __html: renderMarkdown(note.content.substring(0, 200))
+                    }} 
+                  />
+                  {note.content.length > 200 && (
+                    <Box 
+                      sx={{ 
+                        position: 'absolute', 
+                        bottom: 0, 
+                        right: 0,
+                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                        px: 1,
+                        borderRadius: '4px'
+                      }}
+                    >
+                      …
+                    </Box>
+                  )}
                 </Box>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 'auto' }}>
                   {note.categories && note.categories.map((category, index) => (
@@ -324,7 +423,7 @@ const Note = () => {
         </MenuItem>
       </Menu>
       
-      {/* Dialog for full note content */}
+      {/* Dialog for full note content with markdown - update to use renderMarkdown */}
       <Dialog
         open={dialogOpen}
         onClose={handleDialogClose}
@@ -348,12 +447,68 @@ const Note = () => {
                 ))}
               </Box>
             </DialogTitle>
-            <DialogContent 
-              dividers
-            >
-                <Typography variant="body1" sx={{ wordBreak: "break-word" }}>
-                  <div dangerouslySetInnerHTML={{ __html: marked(selectedNoteForDialog.content, { async: false }) }} />
-                </Typography>
+            <DialogContent dividers>
+              <Box 
+                sx={{ 
+                  '& img': {
+                    maxWidth: '100%',
+                    height: 'auto'
+                  },
+                  '& code': {
+                    backgroundColor: 'rgba(0,0,0,0.05)',
+                    padding: '2px 4px',
+                    borderRadius: '3px',
+                    fontFamily: 'monospace'
+                  },
+                  '& pre': {
+                    backgroundColor: 'rgba(0,0,0,0.05)',
+                    padding: '8px',
+                    borderRadius: '3px',
+                    overflow: 'auto',
+                    '& code': {
+                      backgroundColor: 'transparent',
+                      padding: 0
+                    }
+                  },
+                  '& h1, & h2, & h3, & h4, & h5, & h6': {
+                    marginTop: '16px',
+                    marginBottom: '8px',
+                    fontWeight: 'bold',
+                    lineHeight: 1.2
+                  },
+                  '& h1': { fontSize: '2em' },
+                  '& h2': { fontSize: '1.5em' },
+                  '& h3': { fontSize: '1.25em' },
+                  '& ul, & ol': {
+                    paddingLeft: '20px'
+                  },
+                  '& table': {
+                    borderCollapse: 'collapse',
+                    width: '100%',
+                    marginBottom: '16px'
+                  },
+                  '& th, & td': {
+                    border: '1px solid #ddd',
+                    padding: '8px',
+                    textAlign: 'left'
+                  },
+                  '& th': {
+                    backgroundColor: '#f2f2f2'
+                  },
+                  '& blockquote': {
+                    borderLeft: '3px solid #ccc',
+                    padding: '0.5em 10px',
+                    marginLeft: 0,
+                    marginRight: 0,
+                    backgroundColor: '#f9f9f9'
+                  }
+                }}
+                className="markdown-dialog-content"
+              >
+                <div dangerouslySetInnerHTML={{ 
+                  __html: renderMarkdown(selectedNoteForDialog.content)
+                }} />
+              </Box>
             </DialogContent>
             <DialogActions>
               <Button onClick={handleDialogClose} color="primary">Close</Button>
