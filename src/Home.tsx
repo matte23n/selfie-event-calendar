@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router';
-import { Button, Container, Grid2 as Grid, Box, Typography, Card, CardContent } from '@mui/material';
+import { Button, Container, Grid, Box, Typography, Card, CardContent } from '@mui/material';
 import axiosInstance from './api/axiosInstance';
 import { Event, Note, Activity, Pomodoro, Project } from './types/models';
+import { useTimeMachine } from './TimeMachineContext';
 
 function Home() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -17,6 +18,8 @@ function Home() {
     pomodoro: true,
     projects: true
   });
+
+  const { currentTime } = useTimeMachine();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,7 +99,7 @@ function Home() {
     };
 
     fetchData();
-  }, []);
+  }, [currentTime]);
 
   return (
     <Container maxWidth="lg" className='h-screen flex flex-col items-center justify-center'>

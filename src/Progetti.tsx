@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Container, Grid2 as Grid, Box, TextField, Typography, Card, CardContent, CardActions, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
+import { Button, Container, Grid, Box, TextField, Typography, Card, CardContent, CardActions, MenuItem, Select, FormControl, InputLabel } from '@mui/material';
 import axiosInstance from './api/axiosInstance';
 import { Project } from './types/models';
 

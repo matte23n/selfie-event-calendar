@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router';
 import StudyCycleForm from './components/StudyCycleForm';
 import { StudyCycleData, Event } from './types/models';
 import { useDialogContext } from './DialogProvider';
+import { useTimeMachine } from './TimeMachineContext';
 
 const DnDCalendar = withDragAndDrop<CalendarEvent, CalendarResource>(Calendar)
 const myLocalizer = momentLocalizer(moment)
@@ -78,7 +79,7 @@ export default function MyCalendar() {
     const [date, setDate] = useState(new Date());
     const navigate = useNavigate();
     const { setShowStudyCycleForm } = useDialogContext();
-
+    const { currentTime, isInPast, isInFuture } = useTimeMachine();
 
     const CustomToolbar = (toolbar: ToolbarProps<CalendarEvent, CalendarResource>) => {
         return (
@@ -182,13 +183,21 @@ export default function MyCalendar() {
         fetchTasks();
     }, []);
 
+    useEffect(() => {
+        setDate(currentTime);
+    }, [currentTime]);
+
+    // Update to fetch tasks when currentTime changes
+    useEffect(() => {
+        fetchTasks();
+        // No need to fetch events on every time change, as those are displayed in the calendar
+    }, [currentTime]);
+
     // Aggiungi questa funzione per gestire il completamento delle attività
     const handleTaskCompletion = async (taskToComplete: Task, completed: boolean) => {
         try {
-            // The backend expects 'completed' property, not 'completed'
             await axiosInstance.patch(`/activities/${taskToComplete._id}`, { completed });
             
-            // Update the local state after successful API call
             setTasks(tasks.map(task =>
                 task._id === taskToComplete._id ? { ...task, completed } : task
             ));
@@ -268,6 +277,11 @@ export default function MyCalendar() {
         setShowStudyCycleForm(true);
     };
 
+    // Update this function to use the TimeMachine's currentTime for comparison
+    const isTaskOverdue = (task: Task) => {
+        return isInPast(new Date(task.dueDate)) && !task.completed;
+    };
+
     return (<>
         <div style={{ display: 'flex', height: '85vh' }}>
             <div style={{ flex: 2, height: '100%', position: 'relative' }}>
@@ -313,7 +327,7 @@ export default function MyCalendar() {
                             };
                         } else if (event.isTask && event.taskData) {
                             // Stile diverso per le scadenze delle attività
-                            const isOverdue = new Date(event.startDate) < new Date() && !event.taskData.completed;
+                            const isOverdue = isTaskOverdue(event.taskData);
                             return {
                                 style: {
                                     backgroundColor: isOverdue ? '#f44336' : '#ff9800',
@@ -344,7 +358,7 @@ export default function MyCalendar() {
                 {/* Attività in ritardo */}
                 <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ color: '#d32f2f' }}>In ritardo</h3>
-                    {tasks.filter(task => !task.completed && new Date(task.dueDate) < new Date()).map(task => (
+                    {tasks.filter(task => !task.completed && isTaskOverdue(task)).map(task => (
                         <div key={task._id} style={{
                             padding: '10px',
                             marginBottom: '8px',
@@ -366,7 +380,7 @@ export default function MyCalendar() {
                             </div>
                         </div>
                     ))}
-                    {tasks.filter(task => !task.completed && new Date(task.dueDate) < new Date()).length === 0 && (
+                    {tasks.filter(task => !task.completed && isTaskOverdue(task)).length === 0 && (
                         <p style={{ color: '#666', fontStyle: 'italic' }}>Nessuna attività in ritardo</p>
                     )}
                 </div>
@@ -374,7 +388,7 @@ export default function MyCalendar() {
                 {/* Attività da completare */}
                 <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ color: '#1976d2' }}>Da completare</h3>
-                    {tasks.filter(task => !task.completed && new Date(task.dueDate) >= new Date()).map(task => (
+                    {tasks.filter(task => !task.completed && !isTaskOverdue(task)).map(task => (
                         <div key={task._id} style={{
                             padding: '10px',
                             marginBottom: '8px',
@@ -396,7 +410,7 @@ export default function MyCalendar() {
                             </div>
                         </div>
                     ))}
-                    {tasks.filter(task => !task.completed && new Date(task.dueDate) >= new Date()).length === 0 && (
+                    {tasks.filter(task => !task.completed && !isTaskOverdue(task)).length === 0 && (
                         <p style={{ color: '#666', fontStyle: 'italic' }}>Nessuna attività da completare</p>
                     )}
                 </div>

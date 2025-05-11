@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Container, Grid2 as Grid, Box, TextField, Typography, FormHelperText } from '@mui/material';
+import { Button, Container, Grid, Box, TextField, Typography, FormHelperText } from '@mui/material';
 import './Pomodoro.css';
 import axiosInstance from './api/axiosInstance';
 import { useLocation, useNavigate } from 'react-router';
