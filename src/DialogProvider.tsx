@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Checkbox, FormControlLabel, Select, MenuItem } from '@mui/material';
 import axiosInstance from './api/axiosInstance';
+import StudyCycleForm from './components/StudyCycleForm';
 
 // Interfaces
 export interface CalendarEvent {
@@ -29,6 +30,8 @@ interface DialogContextType {
   setShowEventForm: (show: boolean) => void;
   showTaskForm: boolean;
   setShowTaskForm: (show: boolean) => void;
+  showStudyCycleForm: boolean;
+  setShowStudyCycleForm: (show: boolean) => void;
   refreshEvents?: () => void;
   refreshTasks?: () => void;
 }
@@ -38,6 +41,8 @@ const DialogContext = createContext<DialogContextType>({
   setShowEventForm: () => {},
   showTaskForm: false,
   setShowTaskForm: () => {},
+  showStudyCycleForm: false,
+  setShowStudyCycleForm: () => {},
 });
 
 export const useDialogContext = () => useContext(DialogContext);
@@ -45,6 +50,8 @@ export const useDialogContext = () => useContext(DialogContext);
 export const DialogProvider: React.FC<{children: ReactNode, refreshCallbacks?: {refreshEvents?: () => void, refreshTasks?: () => void}}> = ({ children, refreshCallbacks }) => {
   const [showEventForm, setShowEventForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showStudyCycleForm, setShowStudyCycleForm] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [newEvent, setNewEvent] = useState<CalendarEvent>({
     title: '',
     startDate: new Date(),
@@ -110,6 +117,8 @@ export const DialogProvider: React.FC<{children: ReactNode, refreshCallbacks?: {
       setShowEventForm, 
       showTaskForm, 
       setShowTaskForm,
+      showStudyCycleForm,
+      setShowStudyCycleForm,
       refreshEvents: refreshCallbacks?.refreshEvents,
       refreshTasks: refreshCallbacks?.refreshTasks
     }}>
@@ -251,6 +260,14 @@ export const DialogProvider: React.FC<{children: ReactNode, refreshCallbacks?: {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Study Cycle Form Dialog */}
+      <StudyCycleForm 
+        open={showStudyCycleForm}
+        onClose={() => setShowStudyCycleForm(false)}
+        onSave={refreshCallbacks?.refreshEvents || (() => {})}
+        date={selectedDate}
+      />
     </DialogContext.Provider>
   );
 };

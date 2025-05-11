@@ -1,8 +1,11 @@
+interface BaseModel {
+  _id?: string;
+}
+
 /**
  * Event type definition based on backend EventSchema
  */
-export interface Event {
-  _id?: string;
+export interface Event extends BaseModel {
   title: string;
   startDate: string; // ISO date string
   endDate: string; // ISO date string
@@ -12,12 +15,14 @@ export interface Event {
   frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
   repeatCount?: number | null;
   repeatUntil?: string | null; // ISO date string
+  isStudyCycle?: boolean; // Flag for study cycle events
+  studyCycleData?: StudyCycleData; // Additional data for study cycle events
 }
 
 /**
  * Note type definition based on backend Note schema
  */
-export interface Note {
+export interface Note extends BaseModel {
   _id?: string;
   title: string;
   category: string;
@@ -30,8 +35,7 @@ export interface Note {
 /**
  * Activity type definition based on backend ActivitySchema
  */
-export interface Activity {
-  _id?: string;
+export interface Activity extends BaseModel {
   startDate: string; // ISO date string
   dueDate: string; // ISO date string
   finished: boolean;
@@ -41,8 +45,7 @@ export interface Activity {
 /**
  * Pomodoro type definition for frontend
  */
-export interface Pomodoro {
-  _id?: string;
+export interface Pomodoro extends BaseModel {
   studyTime: number;
   breakTime: number;
   totalTime?: number;
@@ -53,10 +56,20 @@ export interface Pomodoro {
 /**
  * Project type definition for frontend
  */
-export interface Project {
-  _id?: string;
+export interface Project extends BaseModel {
   name: string;
   description?: string;
   deadline: string; // ISO date string
   status?: 'not-started' | 'in-progress' | 'completed';
+}
+
+/**
+ * Study Cycle Data for a calendar event
+ */
+export interface StudyCycleData extends BaseModel {
+  studyTime: number; // minutes per study session
+  breakTime: number; // minutes per break
+  totalCycles: number; // total number of cycles 
+  completedCycles: number; // number of completed cycles
+  lastProgress?: string; // ISO date string for last progress
 }

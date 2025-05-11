@@ -6,17 +6,23 @@ import moment from 'moment';
 import 'moment/locale/it';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import ArrowLeftIcon from '@mui/icons-material/ArrowLeft';
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'; import { useCallback, useState, useEffect, useMemo } from 'react';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'; 
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import EventInfoDialog from './EventInfoDialog';
 import axiosInstance from './api/axiosInstance';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Checkbox } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Checkbox, Fab, Tooltip } from '@mui/material';
+import SchoolIcon from '@mui/icons-material/School';
+import { useNavigate } from 'react-router';
+import StudyCycleForm from './components/StudyCycleForm';
+import { StudyCycleData, Event } from './types/models';
+import { useDialogContext } from './DialogProvider';
 
 const DnDCalendar = withDragAndDrop<CalendarEvent, CalendarResource>(Calendar)
 const myLocalizer = momentLocalizer(moment)
 
 // We still need these interfaces for the Calendar component
 export interface CalendarEvent {
-    id?: number;
+    _id?: number;
     title?: string;
     startDate: Date;
     endDate: Date;
@@ -28,11 +34,19 @@ export interface CalendarEvent {
     repeatUntil?: string;
     isTask?: boolean;
     taskData?: Task;
+    isStudyCycle?: boolean;
+    studyCycleData?: {
+        studyTime: number;
+        breakTime: number;
+        totalCycles: number;
+        completedCycles: number;
+        lastProgress?: string;
+    };
 }
 
 // Aggiungi questa interfaccia per le attività
 export interface Task {
-    id?: number;
+    _id?: number;
     title?: string;
     startDate: Date;
     dueDate: Date;
@@ -45,7 +59,7 @@ interface CalendarResource {
 }
 
 const myEventsArray: CalendarEvent[] = [{
-    id: 6,
+    _id: 6,
     title: 'Meeting',
     startDate: new Date(2024, 10, 3, 10, 30, 0, 0),
     endDate: new Date(2024, 10, 4, 12, 30, 0, 0),
@@ -62,6 +76,8 @@ export default function MyCalendar() {
     const [selectedTask, setSelectedTask] = useState<Task | undefined>();
     const [view, setView] = useState<View>(Views.MONTH);
     const [date, setDate] = useState(new Date());
+    const navigate = useNavigate();
+    const { setShowStudyCycleForm } = useDialogContext();
 
 
     const CustomToolbar = (toolbar: ToolbarProps<CalendarEvent, CalendarResource>) => {
@@ -128,8 +144,18 @@ export default function MyCalendar() {
 
     const fetchEvents = async () => {
         try {
-            const { data } = await axiosInstance.get('/events');
-            setMyEvents(data);
+            const [eventsRes, studyCyclesRes] = await Promise.all([
+                axiosInstance.get('/events'),
+                axiosInstance.get('/study-cycles')
+            ]);
+            
+            // Combine regular events and study cycle events
+            const events = eventsRes.data || [];
+            const studyCycles = studyCyclesRes.data || [];
+            
+            setMyEvents([...events, ...studyCycles.filter((sc: StudyCycleData) => 
+                !events.some((e: Event) => e._id === sc._id)
+            )]);
         } catch (error) {
             console.error('Error fetching events:', error);
         }
@@ -157,11 +183,14 @@ export default function MyCalendar() {
     }, []);
 
     // Aggiungi questa funzione per gestire il completamento delle attività
-    const handleTaskCompletion = async (taskId: number, completed: boolean) => {
+    const handleTaskCompletion = async (taskToComplete: Task, completed: boolean) => {
         try {
-            await axiosInstance.patch(`/activities/${taskId}`, { finished: completed });
+            // The backend expects 'completed' property, not 'completed'
+            await axiosInstance.patch(`/activities/${taskToComplete._id}`, { completed });
+            
+            // Update the local state after successful API call
             setTasks(tasks.map(task =>
-                task.id === taskId ? { ...task, completed } : task
+                task._id === taskToComplete._id ? { ...task, completed } : task
             ));
         } catch (error) {
             console.error('Error updating task:', error);
@@ -179,8 +208,8 @@ export default function MyCalendar() {
             }
 
             setMyEvents((prev) => {
-                const existing = prev.find((ev) => ev.id === event.id) ?? {}
-                const filtered = prev.filter((ev) => ev.id !== event.id)
+                const existing = prev.find((ev) => ev._id === event._id) ?? {}
+                const filtered = prev.filter((ev) => ev._id !== event._id)
                 return [...filtered, { ...existing, startDate: new Date(start), endDate: new Date(end), isAllDay: event.isAllDay }]
             })
         },
@@ -190,7 +219,7 @@ export default function MyCalendar() {
     // Funzione per trasformare le attività in eventi per il calendario
     const transformTasksToCalendarEvents = (taskList: Task[]): any[] => {
         return taskList.map(task => ({
-            id: `task-${task.id}`,
+            id: `task-${task._id}`,
             title: `🔔 ${task.title} (Scadenza)`,
             startDate: task.startDate,
             endDate: task.dueDate,
@@ -202,9 +231,46 @@ export default function MyCalendar() {
     // Combina eventi normali e attività per il calendario
     const allCalendarItems = [...transformEventsForCalendar(myEvents), ...transformTasksToCalendarEvents(tasks)];
 
+    // Handle clicking on a study cycle event
+    const handleStudyCycleClick = (event: CalendarEvent) => {
+        if (event.studyCycleData) {
+            // Navigate to Pomodoro page with study cycle data
+            navigate('/pomodoro', { 
+                state: { 
+                    eventId: event._id,
+                    title: event.title,
+                    studyTime: event.studyCycleData.studyTime,
+                    breakTime: event.studyCycleData.breakTime,
+                    totalCycles: event.studyCycleData.totalCycles,
+                    completedCycles: event.studyCycleData.completedCycles || 0,
+                    // Add total time calculation for the form
+                    totalTime: calculateTotalTime(event.studyCycleData)
+                } 
+            });
+        }
+    };
+
+    // Helper function to calculate total time in HH:MM format
+    const calculateTotalTime = (studyCycleData: any) => {
+        if (!studyCycleData) return "00:00";
+        
+        const { studyTime, breakTime, totalCycles } = studyCycleData;
+        const totalMinutes = (studyTime + breakTime) * totalCycles;
+        
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+    };
+
+    // Handle slot select to open study cycle form
+    const handleSelectSlot = ({ start }: { start: Date }) => {
+        setShowStudyCycleForm(true);
+    };
+
     return (<>
         <div style={{ display: 'flex', height: '85vh' }}>
-            <div style={{ flex: 2, height: '100%' }}>
+            <div style={{ flex: 2, height: '100%', position: 'relative' }}>
                 <DnDCalendar
                     localizer={myLocalizer}
                     events={allCalendarItems}
@@ -220,7 +286,9 @@ export default function MyCalendar() {
                     }}
                     components={{toolbar: CustomToolbar}}
                     onSelectEvent={(event) => {
-                        if (event.isTask) {
+                        if (event.isStudyCycle) {
+                            handleStudyCycleClick(event);
+                        } else if (event.isTask) {
                             setSelectedTask(event.taskData);
                         } else {
                             setOpenedDialog(true);
@@ -230,7 +298,20 @@ export default function MyCalendar() {
                     startAccessor="startDate"
                     endAccessor="endDate"
                     eventPropGetter={(event) => {
-                        if (event.isTask && event.taskData) {
+                        if (event.isStudyCycle) {
+                            // Style for study cycle events
+                            const progress = event.studyCycleData ? 
+                                event.studyCycleData.completedCycles / event.studyCycleData.totalCycles : 0;
+                            
+                            return {
+                                style: {
+                                    backgroundColor: '#673ab7', // Purple color for study cycles
+                                    backgroundImage: `linear-gradient(90deg, #8561c5 ${progress * 100}%, #673ab7 ${progress * 100}%)`,
+                                    borderRadius: '4px',
+                                    border: '1px solid #5e35b1'
+                                }
+                            };
+                        } else if (event.isTask && event.taskData) {
                             // Stile diverso per le scadenze delle attività
                             const isOverdue = new Date(event.startDate) < new Date() && !event.taskData.completed;
                             return {
@@ -244,6 +325,8 @@ export default function MyCalendar() {
                         }
                         return {};
                     }}
+                    onSelectSlot={handleSelectSlot}
+                    selectable={true}
                 />
             </div>
             <div style={{
@@ -262,7 +345,7 @@ export default function MyCalendar() {
                 <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ color: '#d32f2f' }}>In ritardo</h3>
                     {tasks.filter(task => !task.completed && new Date(task.dueDate) < new Date()).map(task => (
-                        <div key={task.id} style={{
+                        <div key={task._id} style={{
                             padding: '10px',
                             marginBottom: '8px',
                             backgroundColor: '#ffebee',
@@ -273,7 +356,7 @@ export default function MyCalendar() {
                                 <h4 style={{ margin: '0 0 5px 0' }}>{task.title}</h4>
                                 <Checkbox
                                     checked={task.completed}
-                                    onChange={(e) => task.id && handleTaskCompletion(task.id, e.target.checked)}
+                                    onChange={(e) => task._id && handleTaskCompletion(task, e.target.checked)}
                                     color="primary"
                                 />
                             </div>
@@ -292,7 +375,7 @@ export default function MyCalendar() {
                 <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ color: '#1976d2' }}>Da completare</h3>
                     {tasks.filter(task => !task.completed && new Date(task.dueDate) >= new Date()).map(task => (
-                        <div key={task.id} style={{
+                        <div key={task._id} style={{
                             padding: '10px',
                             marginBottom: '8px',
                             backgroundColor: '#e3f2fd',
@@ -303,7 +386,7 @@ export default function MyCalendar() {
                                 <h4 style={{ margin: '0 0 5px 0' }}>{task.title}</h4>
                                 <Checkbox
                                     checked={task.completed}
-                                    onChange={(e) => task.id && handleTaskCompletion(task.id, e.target.checked)}
+                                    onChange={(e) => task._id && handleTaskCompletion(task, e.target.checked)}
                                     color="primary"
                                 />
                             </div>
@@ -322,7 +405,7 @@ export default function MyCalendar() {
                 <div>
                     <h3 style={{ color: '#388e3c' }}>Completate</h3>
                     {tasks.filter(task => task.completed).map(task => (
-                        <div key={task.id} style={{
+                        <div key={task._id} style={{
                             padding: '10px',
                             marginBottom: '8px',
                             backgroundColor: '#e8f5e9',
@@ -334,7 +417,7 @@ export default function MyCalendar() {
                                 <h4 style={{ margin: '0 0 5px 0', textDecoration: 'line-through' }}>{task.title}</h4>
                                 <Checkbox
                                     checked={task.completed}
-                                    onChange={(e) => task.id && handleTaskCompletion(task.id, e.target.checked)}
+                                    onChange={(e) => task._id && handleTaskCompletion(task, e.target.checked)}
                                     color="primary"
                                 />
                             </div>
@@ -364,15 +447,10 @@ export default function MyCalendar() {
                             {selectedTask.title}
                             <Checkbox
                                 checked={selectedTask.completed}
-                                onChange={(e) => selectedTask.id && handleTaskCompletion(selectedTask.id, e.target.checked)}
+                                onChange={(e) => selectedTask._id && handleTaskCompletion(selectedTask, e.target.checked)}
                                 color="primary"
                             />
                         </div>
-
-
-
-
-
                     </DialogTitle>
                     <DialogContent>
                         <p>Data di inizio: {new Date(selectedTask.startDate).toLocaleDateString()}</p>

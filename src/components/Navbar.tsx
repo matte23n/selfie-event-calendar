@@ -6,13 +6,14 @@ import { useAuth } from '../AuthProvider';
 import AddIcon from '@mui/icons-material/Add';
 import EventIcon from '@mui/icons-material/Event';
 import TaskIcon from '@mui/icons-material/Task';
-import { useDialogContext } from '../DialogProvider'; // Make sure this is used correctly
+import SchoolIcon from '@mui/icons-material/School';
+import { useDialogContext } from '../DialogProvider';
 
 const Navbar: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
   const [fabOpen, setFabOpen] = useState(false);
   const location = useLocation();
-  const { setShowEventForm, setShowTaskForm } = useDialogContext(); // Using DialogContext
+  const { setShowEventForm, setShowTaskForm, setShowStudyCycleForm } = useDialogContext();
   
   // Close FAB menu when route changes
   useEffect(() => {
@@ -23,15 +24,19 @@ const Navbar: React.FC = () => {
     setFabOpen(!fabOpen);
   };
   
-  // These handlers now correctly use the DialogContext methods
   const handleOpenEventForm = () => {
     setFabOpen(false);
-    setShowEventForm(true); // This should open the dialog
+    setShowEventForm(true);
   };
   
   const handleOpenTaskForm = () => {
     setFabOpen(false);
-    setShowTaskForm(true); // This should open the dialog
+    setShowTaskForm(true);
+  };
+  
+  const handleOpenStudyCycleForm = () => {
+    setFabOpen(false);
+    setShowStudyCycleForm(true);
   };
 
   return (
@@ -71,13 +76,35 @@ const Navbar: React.FC = () => {
       {/* Floating Action Button for adding events and tasks */}
       {isAuthenticated && (
         <Box sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000 }}>
+          {/* Study Cycle Button - Shows when expanded */}
+          <Zoom in={fabOpen} style={{ transitionDelay: fabOpen ? '300ms' : '0ms' }}>
+            <Tooltip title="Schedule Study Cycles" placement="left">
+              <Fab 
+                size="medium" 
+                color="info" // Change from 'secondary' to 'info' for a different blue color
+                sx={{ 
+                  position: 'absolute', 
+                  bottom: 190, 
+                  right: 8,
+                  bgcolor: '#673ab7', // Custom purple color matching the study cycles in calendar
+                  '&:hover': {
+                    bgcolor: '#5e35b1' // Darker shade for hover
+                  }
+                }}
+                onClick={handleOpenStudyCycleForm}
+              >
+                <SchoolIcon />
+              </Fab>
+            </Tooltip>
+          </Zoom>
+
           {/* Task Button - Shows when expanded */}
           <Zoom in={fabOpen} style={{ transitionDelay: fabOpen ? '150ms' : '0ms' }}>
             <Tooltip title="Add Task" placement="left">
               <Fab 
                 size="medium" 
                 color="secondary" 
-                sx={{ position: 'absolute', bottom: 70, right: 8 }}
+                sx={{ position: 'absolute', bottom: 130, right: 8 }}
                 onClick={handleOpenTaskForm}
               >
                 <TaskIcon />
@@ -91,7 +118,7 @@ const Navbar: React.FC = () => {
               <Fab 
                 size="medium" 
                 color="primary" 
-                sx={{ position: 'absolute', bottom: 130, right: 8 }}
+                sx={{ position: 'absolute', bottom: 70, right: 8 }}
                 onClick={handleOpenEventForm}
               >
                 <EventIcon />
