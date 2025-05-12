@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, TextField, Button, Typography } from '@mui/material';
 import { Link, useNavigate } from "react-router";
 import axiosInstance from './api/axiosInstance';
@@ -8,8 +8,15 @@ const Login: React.FC = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const { login } = useAuth();
+    const { login, isAuthenticated } = useAuth();
     const navigate = useNavigate();
+
+    // Add useEffect to handle redirection when authentication state changes
+    useEffect(() => {
+        if (isAuthenticated) {
+            navigate('/calendario', { replace: true });
+        }
+    }, [isAuthenticated, navigate]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -17,8 +24,8 @@ const Login: React.FC = () => {
 
         try {
             const response = await axiosInstance.post('/login', { username, password });
-            login(response.data.token); // Store the token in AuthProvider
-            navigate('/');
+            // Just set the token in the AuthProvider - the redirection will be handled by the useEffect above
+            login(response.data.token);
         } catch (err: any) {
             setError(err.response?.data?.message || 'An error occurred. Please try again.');
         }

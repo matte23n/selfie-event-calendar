@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { timeMachineService } from './services/TimeMachineService';
+import notificationService from './services/NotificationService';
 
 interface TimeMachineContextType {
   currentTime: Date;
@@ -25,6 +26,29 @@ const TimeMachineContext = createContext<TimeMachineContextType>({
 
 export const TimeMachineProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentTime, setCurrentTime] = useState(timeMachineService.getCurrentTime());
+  const [previousDay, setPreviousDay] = useState(new Date(currentTime).setHours(0, 0, 0, 0));
+
+  // Function to update the time and trigger notifications if the day changes
+  const updateTime = (newTime: Date) => {
+    const newDay = new Date(newTime).setHours(0, 0, 0, 0);
+    const oldDay = new Date(currentTime).setHours(0, 0, 0, 0);
+    
+    // Update the current time
+    setCurrentTime(newTime);
+    
+    // Check if the day has changed
+    if (newDay !== oldDay) {
+      // Send a notification about the date change
+      notificationService.notifyDateChange(newTime);
+      // Update previous day reference
+      setPreviousDay(newDay);
+      
+      // Notify that we need to recalculate urgency levels for tasks
+      window.dispatchEvent(new CustomEvent('timeMachineChanged', {
+        detail: { newDate: newTime }
+      }));
+    }
+  };
 
   // Listen for changes to the time
   useEffect(() => {
@@ -47,15 +71,53 @@ export const TimeMachineProvider: React.FC<{ children: ReactNode }> = ({ childre
     };
   }, []);
 
+  // Handle date change notifications
+  useEffect(() => {
+    const currentDay = new Date(currentTime).setHours(0, 0, 0, 0);
+    
+    // Check if the day has changed
+    if (currentDay !== previousDay) {
+      // Notify about the date change
+      notificationService.notifyDateChange(currentTime);
+      
+      // Update the previous day reference
+      setPreviousDay(currentDay);
+    }
+  }, [currentTime, previousDay]);
+
   const contextValue = {
     currentTime,
-    setTime: (newTime: Date) => timeMachineService.setTime(newTime),
-    moveForward: (minutes: number) => timeMachineService.moveForward(minutes),
-    moveBackward: (minutes: number) => timeMachineService.moveBackward(minutes),
-    resetToSystemTime: () => timeMachineService.resetToSystemTime(),
-    isInFuture: (date: Date) => timeMachineService.isInFuture(date),
-    isInPast: (date: Date) => timeMachineService.isInPast(date),
-    isToday: (date: Date) => timeMachineService.isToday(date),
+    setTime: (newTime: Date) => {
+      updateTime(newTime);
+    },
+    moveForward: (minutes: number) => {
+      const newTime = new Date(currentTime);
+      newTime.setMinutes(newTime.getMinutes() + minutes);
+      updateTime(newTime);
+    },
+    moveBackward: (minutes: number) => {
+      const newTime = new Date(currentTime);
+      newTime.setMinutes(newTime.getMinutes() - minutes);
+      updateTime(newTime);
+    },
+    resetToSystemTime: () => {
+      updateTime(new Date());
+    },
+    isInFuture: (date: Date) => {
+      return date.getTime() > currentTime.getTime();
+    },
+    isInPast: (date: Date) => {
+      return date.getTime() < currentTime.getTime();
+    },
+    isToday: (date: Date) => {
+      const d1 = date;
+      const d2 = currentTime;
+      return (
+        d1.getFullYear() === d2.getFullYear() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getDate() === d2.getDate()
+      );
+    },
   };
 
   return (

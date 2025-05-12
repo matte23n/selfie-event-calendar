@@ -10,13 +10,14 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import { useCallback, useState, useEffect, useMemo } from 'react';
 import EventInfoDialog from './EventInfoDialog';
 import axiosInstance from './api/axiosInstance';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Checkbox, Fab, Tooltip } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Checkbox, Fab, Tooltip, Box, Typography } from '@mui/material';
 import SchoolIcon from '@mui/icons-material/School';
 import { useNavigate } from 'react-router';
 import StudyCycleForm from './components/StudyCycleForm';
 import { StudyCycleData, Event } from './types/models';
 import { useDialogContext } from './DialogProvider';
 import { useTimeMachine } from './TimeMachineContext';
+import notificationService from './services/NotificationService';
 
 const DnDCalendar = withDragAndDrop<CalendarEvent, CalendarResource>(Calendar)
 const myLocalizer = momentLocalizer(moment)
@@ -80,6 +81,8 @@ export default function MyCalendar() {
     const navigate = useNavigate();
     const { setShowStudyCycleForm } = useDialogContext();
     const { currentTime, isInPast, isInFuture } = useTimeMachine();
+    const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
+    const [notifiedTasksCache, setNotifiedTasksCache] = useState<Record<string, boolean>>({});
 
     const CustomToolbar = (toolbar: ToolbarProps<CalendarEvent, CalendarResource>) => {
         return (
@@ -227,14 +230,85 @@ export default function MyCalendar() {
 
     // Funzione per trasformare le attività in eventi per il calendario
     const transformTasksToCalendarEvents = (taskList: Task[]): any[] => {
-        return taskList.map(task => ({
-            id: `task-${task._id}`,
-            title: `🔔 ${task.title} (Scadenza)`,
-            startDate: task.startDate,
-            endDate: task.dueDate,
-            isTask: true,
-            taskData: task
-        }));
+        return taskList.map(task => {
+            const urgency = getTaskUrgency(task);
+            const urgencyIcon = getUrgencyIcon(urgency);
+            
+            return {
+                id: `task-${task._id}`,
+                title: `${urgencyIcon} ${task.title}`,
+                startDate: task.startDate,
+                endDate: task.dueDate,
+                isTask: true,
+                taskData: task,
+                urgency: urgency
+            };
+        });
+    };
+
+    // Update this function to use the TimeMachine's currentTime for comparison
+    const isTaskOverdue = (task: Task) => {
+        return isInPast(new Date(task.dueDate)) && !task.completed;
+    };
+
+    // Function to determine task urgency based on due date
+    const getTaskUrgency = (task: Task) => {
+        console.log('aaa');
+        if (task.completed) return 'completed';
+        
+        const dueDate = new Date(task.dueDate);
+        const now = currentTime;
+        
+        // If already overdue
+        if (isTaskOverdue(task)) return 'overdue';
+        
+        // Calculate days until due
+        const daysDifference = Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+        
+        // Determine urgency levels
+        if (daysDifference <= 1) return 'urgent'; // Due today or tomorrow
+        if (daysDifference <= 3) return 'high';   // Due in 2-3 days
+        if (daysDifference <= 7) return 'medium'; // Due in 4-7 days
+        return 'low';                            // Due in more than a week
+    };
+    
+    // Function to get color based on urgency
+    const getUrgencyColor = (urgency: string) => {
+        switch (urgency) {
+            case 'overdue': return '#f44336'; // Red
+            case 'urgent': return '#ff5722';  // Deep Orange
+            case 'high': return '#ff9800';    // Orange
+            case 'medium': return '#ffc107';  // Amber
+            case 'low': return '#8bc34a';     // Light Green
+            case 'completed': return '#4caf50'; // Green
+            default: return '#2196f3';        // Blue (default)
+        }
+    };
+    
+    // Function to get urgency label
+    const getUrgencyLabel = (urgency: string) => {
+        switch (urgency) {
+            case 'overdue': return 'In ritardo';
+            case 'urgent': return 'Urgente';
+            case 'high': return 'Alta priorità';
+            case 'medium': return 'Media priorità';
+            case 'low': return 'Bassa priorità';
+            case 'completed': return 'Completata';
+            default: return '';
+        }
+    };
+    
+    // Function to get urgency icon (emoji)
+    const getUrgencyIcon = (urgency: string) => {
+        switch (urgency) {
+            case 'overdue': return '🔴';
+            case 'urgent': return '⚠️';
+            case 'high': return '❗';
+            case 'medium': return '❕';
+            case 'low': return '📝';
+            case 'completed': return '✅';
+            default: return '📌';
+        }
     };
 
     // Combina eventi normali e attività per il calendario
@@ -277,9 +351,104 @@ export default function MyCalendar() {
         setShowStudyCycleForm(true);
     };
 
-    // Update this function to use the TimeMachine's currentTime for comparison
-    const isTaskOverdue = (task: Task) => {
-        return isInPast(new Date(task.dueDate)) && !task.completed;
+
+    // Request notification permissions when component mounts
+    useEffect(() => {
+        const setupNotifications = async () => {
+            const permissionGranted = await notificationService.requestPermission();
+            setNotificationsEnabled(permissionGranted);
+        };
+        
+        setupNotifications();
+        
+        // Set up event listener for opening tasks from notifications
+        const handleOpenTask = (event: CustomEvent) => {
+            const taskId = event.detail;
+            const task = tasks.find(t => t._id == taskId);
+            if (task) {
+                setSelectedTask(task);
+            }
+        };
+        
+        // Set up event listener for re-checking tasks after snoozing
+        const handleCheckTask = (event: CustomEvent) => {
+            const { tag } = event.detail;
+            if (tag && tag.startsWith('task-')) {
+                const taskId = tag.replace('task-', '').split('-')[0];
+                const task = tasks.find(t => t._id == taskId);
+                if (task) {
+                    checkAndNotifyTask(task, true); // force notification
+                }
+            }
+        };
+        
+        // Set up event listener for time machine changes
+        const handleTimeMachineChange = () => {
+            // Reset notification cache when time changes
+            setNotifiedTasksCache({});
+            // Force check all tasks with new time
+            tasks.forEach(task => checkAndNotifyTask(task, true));
+        };
+        
+        window.addEventListener('openTask', handleOpenTask as EventListener);
+        window.addEventListener('checkTask', handleCheckTask as EventListener);
+        window.addEventListener('timeMachineChanged', handleTimeMachineChange);
+        
+        return () => {
+            window.removeEventListener('openTask', handleOpenTask as EventListener);
+            window.removeEventListener('checkTask', handleCheckTask as EventListener);
+            window.removeEventListener('timeMachineChanged', handleTimeMachineChange);
+            notificationService.clearAllNotifications();
+        };
+    }, [tasks]); // Include tasks in the dependency array
+    
+    // Check for notifications when time changes or tasks change
+    useEffect(() => {
+        if (notificationsEnabled) {
+            tasks.forEach(task => checkAndNotifyTask(task));
+        }
+    }, [tasks, currentTime, notificationsEnabled]);
+    
+    // Function to check a task's urgency and send notification if needed
+    const checkAndNotifyTask = (task: Task, forceNotify = false) => {
+        if (task.completed) return;
+        
+        const urgency = getTaskUrgency(task);
+        const taskId = task._id?.toString() || '';
+        const notificationKey = `${taskId}-${urgency}-${currentTime.getDate()}`;
+        
+        // Notify if urgency is medium or higher and we haven't notified yet for this combination
+        const shouldNotify = 
+            ['medium', 'high', 'urgent', 'overdue'].includes(urgency) && 
+            (forceNotify || !notifiedTasksCache[notificationKey]);
+            
+        if (shouldNotify) {
+            notificationService.notifyTask(task, urgency);
+            
+            // Mark as notified for this urgency level and day
+            setNotifiedTasksCache(prev => ({
+                ...prev,
+                [notificationKey]: true
+            }));
+        }
+    };
+
+    // Add snooze functionality for task notifications
+    const snoozeTaskNotification = (taskId: number | undefined, minutes: number = 15) => {
+        if (!taskId) return;
+        
+        // Generate the task tag like we do in the notifications
+        const tag = `task-${taskId}`;
+        
+        // Call the notification service to snooze
+        notificationService.snoozeNotification(tag, minutes);
+        
+        // Provide visual feedback (optional)
+        const taskLabel = tasks.find(t => t._id === taskId)?.title;
+        if (taskLabel) {
+            // Display temporary confirmation message
+            alert(`Notifiche per "${taskLabel}" posticipate di ${minutes} minuti`);
+        }
     };
 
     return (<>
@@ -326,13 +495,14 @@ export default function MyCalendar() {
                                 }
                             };
                         } else if (event.isTask && event.taskData) {
-                            // Stile diverso per le scadenze delle attività
-                            const isOverdue = isTaskOverdue(event.taskData);
+                            const urgency = getTaskUrgency(event.taskData);
+                            const urgencyColor = getUrgencyColor(urgency);
+                            
                             return {
                                 style: {
-                                    backgroundColor: isOverdue ? '#f44336' : '#ff9800',
+                                    backgroundColor: urgencyColor,
                                     borderRadius: '4px',
-                                    border: event.taskData.completed ? '2px solid green' : 'none',
+                                    border: event.taskData.completed ? '2px solid #4caf50' : 'none',
                                     opacity: event.taskData.completed ? 0.7 : 1
                                 }
                             };
@@ -364,10 +534,14 @@ export default function MyCalendar() {
                             marginBottom: '8px',
                             backgroundColor: '#ffebee',
                             borderRadius: '4px',
-                            border: '1px solid #ffcdd2'
+                            borderLeft: `6px solid ${getUrgencyColor('overdue')}`,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <h4 style={{ margin: '0 0 5px 0' }}>{task.title}</h4>
+                                <h4 style={{ margin: '0 0 5px 0', display: 'flex', alignItems: 'center' }}>
+                                    <span style={{ marginRight: '8px', fontSize: '18px' }}>{getUrgencyIcon('overdue')}</span>
+                                    {task.title}
+                                </h4>
                                 <Checkbox
                                     checked={task.completed}
                                     onChange={(e) => task._id && handleTaskCompletion(task, e.target.checked)}
@@ -375,7 +549,6 @@ export default function MyCalendar() {
                                 />
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8em', color: '#666' }}>
-                                <span>Inizio: {new Date(task.startDate).toLocaleDateString()}</span>
                                 <span>Scadenza: {new Date(task.dueDate).toLocaleDateString()}</span>
                             </div>
                         </div>
@@ -388,28 +561,44 @@ export default function MyCalendar() {
                 {/* Attività da completare */}
                 <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ color: '#1976d2' }}>Da completare</h3>
-                    {tasks.filter(task => !task.completed && !isTaskOverdue(task)).map(task => (
-                        <div key={task._id} style={{
-                            padding: '10px',
-                            marginBottom: '8px',
-                            backgroundColor: '#e3f2fd',
-                            borderRadius: '4px',
-                            border: '1px solid #bbdefb'
-                        }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <h4 style={{ margin: '0 0 5px 0' }}>{task.title}</h4>
-                                <Checkbox
-                                    checked={task.completed}
-                                    onChange={(e) => task._id && handleTaskCompletion(task, e.target.checked)}
-                                    color="primary"
-                                />
+                    {tasks.filter(task => !task.completed && !isTaskOverdue(task)).map(task => {
+                        const urgency = getTaskUrgency(task);
+                        return (
+                            <div key={task._id} style={{
+                                padding: '10px',
+                                marginBottom: '8px',
+                                backgroundColor: '#e3f2fd',
+                                borderRadius: '4px',
+                                borderLeft: `6px solid ${getUrgencyColor(urgency)}`,
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <h4 style={{ margin: '0 0 5px 0', display: 'flex', alignItems: 'center' }}>
+                                        <span style={{ marginRight: '8px', fontSize: '18px' }}>{getUrgencyIcon(urgency)}</span>
+                                        {task.title}
+                                    </h4>
+                                    <Checkbox
+                                        checked={task.completed}
+                                        onChange={(e) => task._id && handleTaskCompletion(task, e.target.checked)}
+                                        color="primary"
+                                    />
+                                </div>
+                                <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    fontSize: '0.8em'
+                                }}>
+                                    <span>Scadenza: {new Date(task.dueDate).toLocaleDateString()}</span>
+                                    <span style={{ 
+                                        fontWeight: 'bold', 
+                                        color: getUrgencyColor(urgency)
+                                    }}>
+                                        {getUrgencyLabel(urgency)}
+                                    </span>
+                                </div>
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8em', color: '#666' }}>
-                                <span>Inizio: {new Date(task.startDate).toLocaleDateString()}</span>
-                                <span>Scadenza: {new Date(task.dueDate).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {tasks.filter(task => !task.completed && !isTaskOverdue(task)).length === 0 && (
                         <p style={{ color: '#666', fontStyle: 'italic' }}>Nessuna attività da completare</p>
                     )}
@@ -458,7 +647,15 @@ export default function MyCalendar() {
                 <>
                     <DialogTitle>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            {selectedTask.title}
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ 
+                                    marginRight: '10px',
+                                    fontSize: '24px' 
+                                }}>
+                                    {getUrgencyIcon(getTaskUrgency(selectedTask))}
+                                </span>
+                                {selectedTask.title}
+                            </div>
                             <Checkbox
                                 checked={selectedTask.completed}
                                 onChange={(e) => selectedTask._id && handleTaskCompletion(selectedTask, e.target.checked)}
@@ -469,7 +666,53 @@ export default function MyCalendar() {
                     <DialogContent>
                         <p>Data di inizio: {new Date(selectedTask.startDate).toLocaleDateString()}</p>
                         <p>Data di scadenza: {new Date(selectedTask.dueDate).toLocaleDateString()}</p>
+                        
+                        {/* Add urgency information */}
+                        <p style={{ 
+                            fontWeight: 'bold', 
+                            color: getUrgencyColor(getTaskUrgency(selectedTask)) 
+                        }}>
+                            Priorità: {getUrgencyLabel(getTaskUrgency(selectedTask))}
+                        </p>
+                        
                         <p>Stato: {selectedTask.completed ? 'Completata' : 'Da completare'}</p>
+                        
+                        {/* Add snooze options for non-completed tasks */}
+                        {!selectedTask.completed && (
+                            <Box mt={2}>
+                                <Typography variant="subtitle2">Posticipa notifica:</Typography>
+                                <Box display="flex" gap={1} mt={1}>
+                                    <Button 
+                                        size="small" 
+                                        variant="outlined"
+                                        onClick={() => snoozeTaskNotification(selectedTask._id, 15)}
+                                    >
+                                        15 min
+                                    </Button>
+                                    <Button 
+                                        size="small" 
+                                        variant="outlined"
+                                        onClick={() => snoozeTaskNotification(selectedTask._id, 30)}
+                                    >
+                                        30 min
+                                    </Button>
+                                    <Button 
+                                        size="small" 
+                                        variant="outlined"
+                                        onClick={() => snoozeTaskNotification(selectedTask._id, 60)}
+                                    >
+                                        1 ora
+                                    </Button>
+                                    <Button 
+                                        size="small" 
+                                        variant="outlined"
+                                        onClick={() => snoozeTaskNotification(selectedTask._id, 24 * 60)}
+                                    >
+                                        1 giorno
+                                    </Button>
+                                </Box>
+                            </Box>
+                        )}
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setSelectedTask(undefined)} color="primary">

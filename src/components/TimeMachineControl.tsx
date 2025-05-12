@@ -16,16 +16,12 @@ import { useTimeMachine } from '../TimeMachineContext';
 const TimeMachineControl: React.FC = () => {
   const { currentTime, setTime, resetToSystemTime } = useTimeMachine();
   const [open, setOpen] = useState(false);
-  
-  // Use separate state for the input fields that doesn't affect the app until applied
-  const [dateInput, setDateInput] = useState(
-    currentTime.toISOString().slice(0, 10)
-  );
+  const [dateInput, setDateInput] = useState(currentTime.toISOString().slice(0, 10));
   const [timeInput, setTimeInput] = useState(
     currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   );
 
-  // Update input fields when currentTime changes (e.g., on reset)
+  // Update input fields when currentTime changes
   useEffect(() => {
     setDateInput(currentTime.toISOString().slice(0, 10));
     setTimeInput(currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -42,8 +38,11 @@ const TimeMachineControl: React.FC = () => {
       // Set the time components
       newDateTime.setHours(hours || 0, minutes || 0, 0, 0);
       
-      // Apply the new date/time to the TimeMachine
+      // Apply the new date/time to the TimeMachine - this will trigger notifications
       setTime(newDateTime);
+      
+      // Close the dropdown
+      setOpen(false);
     } catch (error) {
       console.error('Error applying date/time:', error);
     }
@@ -52,6 +51,7 @@ const TimeMachineControl: React.FC = () => {
   // Format the date for display
   const formattedDate = currentTime.toLocaleDateString();
   const formattedTime = currentTime.toLocaleTimeString();
+  const isSystemTime = Math.abs(currentTime.getTime() - new Date().getTime()) < 1000; // Within 1 second
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', mx: 2, position: 'relative' }}>
@@ -61,7 +61,7 @@ const TimeMachineControl: React.FC = () => {
         sx={{ p: 0.5, mr: 1 }}
         aria-label="Toggle time machine controls"
       >
-        <AccessTimeIcon />
+        <AccessTimeIcon color={isSystemTime ? 'inherit' : 'warning'} />
       </IconButton>
 
       <Typography 
@@ -69,7 +69,7 @@ const TimeMachineControl: React.FC = () => {
         sx={{ 
           cursor: 'pointer', 
           fontWeight: 'bold',
-          color: currentTime.getTime() !== new Date().getTime() ? 'orange' : 'inherit'
+          color: isSystemTime ? 'inherit' : 'orange'
         }}
         onClick={() => setOpen(!open)}
       >
@@ -123,17 +123,8 @@ const TimeMachineControl: React.FC = () => {
                   '& fieldset': {
                     borderColor: '#ff9800',
                   },
-                  '&:hover fieldset': {
-                    borderColor: '#ffb74d',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#ffa726',
-                  },
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#ff9800',
-                },
-                '& .MuiSvgIcon-root': {
                   color: '#ff9800',
                 },
               }}
@@ -162,17 +153,8 @@ const TimeMachineControl: React.FC = () => {
                   '& fieldset': {
                     borderColor: '#ff9800',
                   },
-                  '&:hover fieldset': {
-                    borderColor: '#ffb74d',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#ffa726',
-                  },
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#ff9800',
-                },
-                '& .MuiSvgIcon-root': {
                   color: '#ff9800',
                 },
               }}
@@ -201,7 +183,7 @@ const TimeMachineControl: React.FC = () => {
             startIcon={<RestartAltIcon />} 
             onClick={() => {
               resetToSystemTime();
-              // The input fields will be updated via the useEffect when currentTime changes
+              // The input fields will be updated via the useEffect
             }}
             fullWidth
             sx={{

@@ -43,7 +43,9 @@ const [currentTime, setCurrentTime] = useState<Date>(new Date());
                 <Route
                   path="/calendario"
                   element={
-                    <MyCalendar />
+                    <ProtectedRoute>
+                      <MyCalendar />
+                    </ProtectedRoute>
                   }
                 />
                 <Route
