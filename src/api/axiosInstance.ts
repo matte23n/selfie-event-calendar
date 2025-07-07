@@ -3,7 +3,7 @@ import { timeMachineService } from '../services/TimeMachineService';
 
 // Create axios instance with base configuration
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: 'https://site242534.tw.cs.unibo.it/api/',
   timeout: 10000,
 });
 

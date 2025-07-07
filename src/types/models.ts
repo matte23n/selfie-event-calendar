@@ -9,7 +9,7 @@ export interface Event extends BaseModel {
   title: string;
   startDate: string; // ISO date string
   endDate: string; // ISO date string
-  place: string;
+  place?: string;
   isAllDay?: boolean;
   isRepeatable?: boolean;
   frequency?: 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
@@ -17,6 +17,8 @@ export interface Event extends BaseModel {
   repeatUntil?: string | null; // ISO date string
   isStudyCycle?: boolean; // Flag for study cycle events
   studyCycleData?: StudyCycleData; // Additional data for study cycle events
+  notifications?: NotificationSetting[];
+  invitedUsers?: string[]; // Array of user IDs or emails
 }
 
 /**
@@ -72,4 +74,20 @@ export interface StudyCycleData extends BaseModel {
   totalCycles: number; // total number of cycles 
   completedCycles: number; // number of completed cycles
   lastProgress?: string; // ISO date string for last progress
+}
+
+export interface NotificationSetting {
+  type: NotificationType;
+  advanceTime: number; // in minutes
+  advanceUnit: string;
+  repeat?: RepeatSetting;
+}
+
+export type NotificationType = 'system' | 'alert' | 'email' | 'whatsapp';
+
+export interface RepeatSetting {
+  type: 'count' | 'interval' | 'until-response';
+  count?: number; // Number of times to repeat
+  interval?: number; // Repeat interval in minutes
+  responded?: boolean; // For until-response type
 }

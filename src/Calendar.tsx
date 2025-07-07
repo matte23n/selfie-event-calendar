@@ -14,10 +14,11 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Checkbox, Fa
 import SchoolIcon from '@mui/icons-material/School';
 import { useNavigate } from 'react-router';
 import StudyCycleForm from './components/StudyCycleForm';
-import { StudyCycleData, Event } from './types/models';
+import { StudyCycleData, Event, NotificationSetting } from './types/models';
 import { useDialogContext } from './DialogProvider';
 import { useTimeMachine } from './TimeMachineContext';
 import notificationService from './services/NotificationService';
+import eventNotificationService from './services/EventNotificationService';
 
 const DnDCalendar = withDragAndDrop<CalendarEvent, CalendarResource>(Calendar)
 const myLocalizer = momentLocalizer(moment)
@@ -44,6 +45,8 @@ export interface CalendarEvent {
         completedCycles: number;
         lastProgress?: string;
     };
+    notifications?: NotificationSetting[];
+    invitedUsers?: string[];
 }
 
 // Aggiungi questa interfaccia per le attività
@@ -157,9 +160,15 @@ export default function MyCalendar() {
             const events = eventsRes.data || [];
             const studyCycles = studyCyclesRes.data || [];
             
-            setMyEvents([...events, ...studyCycles.filter((sc: StudyCycleData) => 
+            const allEvents = [...events, ...studyCycles.filter((sc: StudyCycleData) => 
                 !events.some((e: Event) => e._id === sc._id)
-            )]);
+            )];
+            
+            setMyEvents(allEvents);
+            
+            // Schedule notifications for all events
+            eventNotificationService.scheduleAllEvents(events);
+            
         } catch (error) {
             console.error('Error fetching events:', error);
         }
@@ -450,6 +459,28 @@ export default function MyCalendar() {
             alert(`Notifiche per "${taskLabel}" posticipate di ${minutes} minuti`);
         }
     };
+
+    // Add event listener for openEvent from notifications
+    useEffect(() => {
+        const handleOpenEvent = (event: CustomEvent) => {
+            const eventId = event.detail?.eventId;
+            if (eventId) {
+                const foundEvent = myEvents.find(e => e._id == eventId);
+                if (foundEvent) {
+                    setSelectedEvent(foundEvent);
+                    setOpenedDialog(true);
+                }
+            }
+        };
+        
+        window.addEventListener('openEvent', handleOpenEvent as EventListener);
+        
+        return () => {
+            window.removeEventListener('openEvent', handleOpenEvent as EventListener);
+            // Cancel all notification schedules when component unmounts
+            eventNotificationService.cancelAllNotifications();
+        };
+    }, [myEvents]);
 
     return (<>
         <div style={{ display: 'flex', height: '85vh' }}>
