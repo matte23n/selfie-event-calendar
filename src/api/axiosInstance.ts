@@ -19,6 +19,12 @@ axiosInstance.interceptors.request.use(
       virtualTime: virtualTime,
     };
     
+    // Add token to headers if available
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     return config;
   },
   (error) => {
