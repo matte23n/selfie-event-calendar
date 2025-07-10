@@ -159,10 +159,14 @@ export default function MyCalendar() {
             // Combine regular events and study cycle events
             const events = eventsRes.data || [];
             const studyCycles = studyCyclesRes.data || [];
-            
-            const allEvents = [...events, ...studyCycles.filter((sc: StudyCycleData) => 
+            /*...studyCycles.filter((sc: StudyCycleData) => 
                 !events.some((e: Event) => e._id === sc._id)
-            )];
+            )*/
+            const allEvents = [...events.map((event: any) => ({
+                ...event,
+                startDate: new Date(event.startDate),
+            })),
+            ];
             
             setMyEvents(allEvents);
             
@@ -242,12 +246,11 @@ export default function MyCalendar() {
         return taskList.map(task => {
             const urgency = getTaskUrgency(task);
             const urgencyIcon = getUrgencyIcon(urgency);
-            
             return {
                 id: `task-${task._id}`,
                 title: `${urgencyIcon} ${task.title}`,
-                startDate: task.startDate,
-                endDate: task.dueDate,
+                startDate: new Date(task.startDate),
+                endDate: new Date(task.dueDate),
                 isTask: true,
                 taskData: task,
                 urgency: urgency
