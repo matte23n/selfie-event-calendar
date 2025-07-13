@@ -46,7 +46,12 @@ export interface CalendarEvent {
         lastProgress?: string;
     };
     notifications?: NotificationSetting[];
-    invitedUsers?: string[];
+    invitedUsers?: InvitedUser[];
+}
+
+export interface InvitedUser {
+    userId: string;
+    username: string;
 }
 
 // Aggiungi questa interfaccia per le attività
