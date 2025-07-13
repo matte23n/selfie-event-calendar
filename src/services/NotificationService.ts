@@ -1,4 +1,5 @@
 import { Task } from '../Calendar';
+import axiosInstance from '../api/axiosInstance';
 
 interface NotificationOptions {
   title: string;
@@ -8,15 +9,55 @@ interface NotificationOptions {
   requireInteraction?: boolean;
   renotifyInterval?: number; // in minutes
   data?: any;
+  usePush?: boolean; // Whether to use push notification via ServiceWorker
 }
 
 class NotificationService {
   private notificationPermission: NotificationPermission = 'default';
   private activeNotifications: Map<string, { notification: Notification, timerId?: number }> = new Map();
   private snoozeTimers: Map<string, number> = new Map();
+  private serviceWorkerRegistration: ServiceWorkerRegistration | null = null;
 
   constructor() {
     this.checkPermission();
+    this.registerServiceWorker();
+  }
+
+  private async registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+      try {
+        this.serviceWorkerRegistration = await navigator.serviceWorker.register('/serviceWorker.js', {
+          scope: '/'
+        });
+        console.log('ServiceWorker registration successful:', this.serviceWorkerRegistration);
+        const subscription = await this.serviceWorkerRegistration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: 'BIfkA26WHqJ99bVptvUUsKn4bCKMbv2n67ntlEma7emv7K888L3KDl0DcA3VcQP2Q0lRSfNQUuxoEv1OzU8KwBw',
+        });
+        await axiosInstance.post('/push/subscribe', {
+        subscription
+      });
+      
+      } catch (error) {
+        console.error('ServiceWorker registration failed:', error);
+      }
+    }
+  }
+
+  public async getServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+    if (this.serviceWorkerRegistration) {
+      return this.serviceWorkerRegistration;
+    }
+    
+    if ('serviceWorker' in navigator) {
+      try {
+        return await navigator.serviceWorker.ready;
+      } catch (err) {
+        console.error('Error getting ServiceWorker registration', err);
+      }
+    }
+    
+    return null;
   }
 
   private async checkPermission() {
@@ -58,6 +99,52 @@ class NotificationService {
         }
       }
 
+      // If using push notification via ServiceWorker
+      if (options.usePush && 'serviceWorker' in navigator) {
+        const registration = await this.getServiceWorkerRegistration();
+        if (registration) {
+          await registration.showNotification(options.title, {
+            body: options.body,
+            icon: options.icon || '/notification-icon.png',
+            tag: options.tag,
+            requireInteraction: options.requireInteraction || false,
+            data: options.data,
+            badge: '/favicon.ico',
+            actions: options.data?.actions || []
+          });
+          
+          // We don't have direct access to the Notification object with ServiceWorker
+          // but we'll create a placeholder for our tracking
+          const placeholderNotification = {
+            close: () => {
+              // This is a placeholder close method
+              console.log('Closing push notification placeholder');
+            },
+            data: options.data,
+            onclick: null
+          } as unknown as Notification;
+          
+          if (options.tag) {
+            let timerId: number | undefined = undefined;
+            
+            // Set up renotify if specified
+            if (options.renotifyInterval) {
+              timerId = window.setTimeout(() => {
+                this.showNotification(options);
+              }, options.renotifyInterval * 60 * 1000);
+            }
+            
+            this.activeNotifications.set(options.tag, { 
+              notification: placeholderNotification,
+              timerId
+            });
+          }
+          
+          return placeholderNotification;
+        }
+      }
+
+      // Fall back to regular browser notification
       const notification = new Notification(options.title, {
         body: options.body,
         icon: options.icon || '/notification-icon.png',
@@ -75,6 +162,10 @@ class NotificationService {
         if (notification.data?.action === 'openTask') {
           window.dispatchEvent(new CustomEvent('openTask', { 
             detail: notification.data.taskId 
+          }));
+        } else if (notification.data?.action === 'openEvent') {
+          window.dispatchEvent(new CustomEvent('openEvent', { 
+            detail: notification.data.eventId 
           }));
         }
         
@@ -162,6 +253,7 @@ class NotificationService {
       tag: `task-${taskId}-${urgencyLevel}`,
       requireInteraction,
       renotifyInterval,
+      usePush: true, // Use push notification for tasks
       data: {
         action: 'openTask',
         taskId: taskId
@@ -190,6 +282,7 @@ class NotificationService {
       body: `La Time Machine è stata impostata a: ${formattedDate}, ${formattedTime}`,
       tag: 'time-machine-change',
       requireInteraction: true,
+      usePush: true // Use push notification for time changes
     });
   }
 

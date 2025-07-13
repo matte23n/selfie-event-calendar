@@ -1,3 +1,5 @@
+import eventNotificationService from './EventNotificationService';
+
 export class TimeMachineService {
   private _virtualTime: Date;
   private _usingSystemTime: boolean = true;
@@ -25,10 +27,29 @@ export class TimeMachineService {
   /**
    * Set the virtual time to a specific date and time
    */
-  public setTime(newTime: Date): void {
+  public setTime(newTime: Date): Promise<void> {
+    const oldTime = this._virtualTime;
     this._virtualTime = new Date(newTime);
     this._usingSystemTime = false;
     this.notifyListeners();
+    
+    // Reschedule notifications if time has changed significantly (more than 1 minute)
+    if (Math.abs(this._virtualTime.getTime() - oldTime.getTime()) > 60000) {
+      // Dispatch a custom event to trigger notification rescheduling
+      if (typeof window !== 'undefined') {
+        eventNotificationService.cancelAllNotifications();
+      }
+    }
+
+    // Create and dispatch a custom event for other components
+    if (typeof window !== 'undefined') {
+      const event = new CustomEvent('timeMachineChanged', {
+        detail: { time: this._virtualTime },
+      });
+      window.dispatchEvent(event);
+    }
+
+    return Promise.resolve();
   }
 
   /**
@@ -52,10 +73,21 @@ export class TimeMachineService {
   /**
    * Reset virtual time to system time
    */
-  public resetToSystemTime(): void {
+  public resetToSystemTime(): Promise<void> {
+    const oldTime = this._virtualTime;
     this._virtualTime = new Date();
     this._usingSystemTime = true;
     this.notifyListeners();
+    
+    // Reschedule notifications if time has changed significantly (more than 1 minute)
+    if (Math.abs(this._virtualTime.getTime() - oldTime.getTime()) > 60000) {
+      // Dispatch a custom event to trigger notification rescheduling
+      if (typeof window !== 'undefined') {
+        eventNotificationService.cancelAllNotifications();
+      }
+    }
+    
+    return Promise.resolve();
   }
 
   /**

@@ -1,5 +1,7 @@
 import { NotificationSetting, Event } from '../types/models';
 import notificationService from './NotificationService';
+import axiosInstance from '../api/axiosInstance';
+import { timeMachineService } from './TimeMachineService';
 
 class EventNotificationService {
   private scheduledNotifications: Map<string, number[]> = new Map();
@@ -7,49 +9,7 @@ class EventNotificationService {
   constructor() {
     // Initialize
   }
-  
-  /**
-   * Schedule notifications for an event
-   */
-  public scheduleEventNotifications(event: Event): void {
-    // Cancel any existing notifications for this event
-    this.cancelEventNotifications(event._id as string);
-    
-    const timerIds: number[] = [];
-    
-    // No notifications to schedule
-    if (!event.notifications || event.notifications.length === 0) return;
-    
-    const eventTime = new Date(event.startDate).getTime();
-    
-    // Schedule each notification
-    event.notifications.forEach(notification => {
-      // Calculate when to show the notification
-      const advanceMs = this.calculateAdvanceTimeInMs(notification);
-      const notificationTime = eventTime - advanceMs;
-      
-      // If notification time is in the past, skip it
-      if (notificationTime < Date.now()) return;
-      
-      // Schedule the notification
-      const timerId = window.setTimeout(() => {
-        this.showNotification(event, notification);
-      }, notificationTime - Date.now());
-      
-      timerIds.push(timerId);
-      
-      // If there's a repeat setting, schedule repeat notifications
-      if (notification.repeat) {
-        const repeatTimerIds = this.scheduleRepeatNotifications(event, notification, notificationTime);
-        timerIds.push(...repeatTimerIds);
-      }
-    });
-    
-    // Store timer IDs so we can cancel them later if needed
-    if (timerIds.length > 0) {
-      this.scheduledNotifications.set(event._id as string, timerIds);
-    }
-  }
+
   
   /**
    * Cancel all scheduled notifications for an event
@@ -143,7 +103,7 @@ class EventNotificationService {
   /**
    * Show a notification for an event
    */
-  private showNotification(event: Event, notification: NotificationSetting, isRepeat = false): void {
+  private async showNotification(event: Event, notification: NotificationSetting, isRepeat = false): Promise<void> {
     // Get the formatted event time
     const eventTime = new Date(event.startDate).toLocaleTimeString([], {
       hour: '2-digit',
@@ -159,6 +119,16 @@ class EventNotificationService {
       body += ` (in ${timeText})`;
     }
     
+    // Try to use server push notification for system notifications if possible
+    if (notification.type === 'system') {
+      try {
+        await this.sendServerPushNotification(event, title, body);
+        return;
+      } catch (error) {
+        console.log('Failed to send server push notification, falling back to client-side', error);
+      }
+    }
+    
     // Show the notification based on type
     switch (notification.type) {
       case 'system':
@@ -171,12 +141,24 @@ class EventNotificationService {
         // In a real app, would call an API to send an email
         console.log(`Would send email: ${title} - ${body}`);
         break;
-      // case 'whatsapp':
-      //   // In a real app, would integrate with WhatsApp API
-      //   console.log(`Would send WhatsApp: ${title} - ${body}`);
-      //   break;
       default:
         this.showSystemNotification(event._id as string, title, body);
+    }
+  }
+  
+  /**
+   * Send a push notification through the server
+   */
+  private async sendServerPushNotification(event: Event, title: string, body: string): Promise<void> {
+    try {
+      await axiosInstance.post(`/push/notify/event/${event._id}`, {
+        title,
+        body,
+        time: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error sending push notification through server:', error);
+      throw error;
     }
   }
   
@@ -189,6 +171,7 @@ class EventNotificationService {
       body,
       tag: `event-${eventId}`,
       requireInteraction: true,
+      usePush: true, // Use push notification when possible
       data: {
         action: 'openEvent',
         eventId
@@ -201,6 +184,11 @@ class EventNotificationService {
    */
   private calculateAdvanceTimeInMs(notification: NotificationSetting): number {
     const { advanceTime, advanceUnit } = notification;
+    
+    // If advanceTime is 0, notification should be sent at event time
+    if (advanceTime === 0) {
+      return 0;
+    }
     
     switch (advanceUnit) {
       case 'minute':
@@ -231,19 +219,7 @@ class EventNotificationService {
     
     return `${advanceTime} ${unit}`;
   }
-  
-  /**
-   * Schedule notifications for all events
-   */
-  public scheduleAllEvents(events: Event[]): void {
-    // Cancel all existing notification schedules
-    this.cancelAllNotifications();
-    
-    // Schedule notifications for each event
-    events.forEach(event => {
-      this.scheduleEventNotifications(event);
-    });
-  }
+
   
   /**
    * Cancel all scheduled notifications

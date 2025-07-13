@@ -175,8 +175,6 @@ export default function MyCalendar() {
             
             setMyEvents(allEvents);
             
-            // Schedule notifications for all events
-            eventNotificationService.scheduleAllEvents(events);
             
         } catch (error) {
             console.error('Error fetching events:', error);

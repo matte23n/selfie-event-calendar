@@ -169,8 +169,6 @@ export const DialogProvider: React.FC<{children: ReactNode, refreshCallbacks?: {
           _id: response.data.insertedId
         };
         
-        // Schedule notifications for the new event
-        eventNotificationService.scheduleEventNotifications(eventWithId);
       }
       
       setShowEventForm(false);
@@ -411,6 +409,7 @@ export const DialogProvider: React.FC<{children: ReactNode, refreshCallbacks?: {
                         advanceUnit: e.target.value as 'minute' | 'hour' | 'day'
                       })}
                       label="Unit"
+                      disabled={currentNotification.advanceTime === 0}
                     >
                       <MenuItem value="minute">Minute(s)</MenuItem>
                       <MenuItem value="hour">Hour(s)</MenuItem>
