@@ -18,7 +18,7 @@ const StudyCycleForm = ({ open, onClose, onSave, date = new Date() }: StudyCycle
     const [breakTime, setBreakTime] = useState(5);
     const [totalCycles, setTotalCycles] = useState(4);
     const [selectedDate, setSelectedDate] = useState(
-        new Date(date).toISOString().split('T')[0]
+        new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 10)
     );
     const [startTime, setStartTime] = useState(
         new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -31,7 +31,7 @@ const StudyCycleForm = ({ open, onClose, onSave, date = new Date() }: StudyCycle
             setStudyTime(25);
             setBreakTime(5);
             setTotalCycles(4);
-            setSelectedDate(new Date(date).toISOString().split('T')[0]);
+            setSelectedDate(new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 10));
             setStartTime(new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         }
     }, [open, date]);
@@ -119,7 +119,7 @@ const StudyCycleForm = ({ open, onClose, onSave, date = new Date() }: StudyCycle
                         onChange={(e) => setSelectedDate(e.target.value)}
                         margin="normal"
                         InputLabelProps={{ shrink: true }}
-                    />
+                    />        
                     <TextField
                         label="Start Time"
                         type="time"

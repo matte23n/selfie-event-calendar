@@ -87,10 +87,12 @@ export default function MyCalendar() {
     const [view, setView] = useState<View>(Views.MONTH);
     const [date, setDate] = useState(new Date());
     const navigate = useNavigate();
-    const { setShowStudyCycleForm } = useDialogContext();
+    const { setShowStudyCycleForm, setShowEventForm, setShowTaskForm } = useDialogContext();
     const { currentTime, isInPast, isInFuture } = useTimeMachine();
     const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
     const [notifiedTasksCache, setNotifiedTasksCache] = useState<Record<string, boolean>>({});
+    const [selectedSlot, setSelectedSlot] = useState<{ start: Date } | null>(null);
+    const [showSelectEventTypeDialog, setShowSelectEventTypeDialog] = useState(false);
 
     const CustomToolbar = (toolbar: ToolbarProps<CalendarEvent, CalendarResource>) => {
         return (
@@ -361,11 +363,42 @@ export default function MyCalendar() {
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     };
 
-    // Handle slot select to open study cycle form
+    // Handle slot select to show event type selection dialog
     const handleSelectSlot = ({ start }: { start: Date }) => {
-        setShowStudyCycleForm(true);
+        setSelectedSlot({ start });
+        setShowSelectEventTypeDialog(true);
     };
 
+    // Handle creating different types of events
+    const handleCreateEventType = (eventType: 'event' | 'task' | 'studyCycle') => {
+        setShowSelectEventTypeDialog(false);
+        
+        if (!selectedSlot) return;
+        
+        switch (eventType) {
+            case 'event':
+                // Use DialogProvider to show event form with initial data
+                setShowEventForm(true, {
+                    startDate: selectedSlot.start,
+                    endDate: new Date(new Date(selectedSlot.start).getTime() + 60 * 60 * 1000)
+                });
+                break;
+            case 'task':
+                // Use DialogProvider to show task form with initial data
+                setShowTaskForm(true, {
+                    startDate: selectedSlot.start,
+                    dueDate: new Date(new Date(selectedSlot.start).getTime() + 24 * 60 * 60 * 1000)
+                });
+                break;
+            case 'studyCycle':
+                // Show study cycle form (already using the provider)
+                setShowStudyCycleForm(true, selectedSlot.start);
+                break;
+        }
+        
+        // Reset selected slot
+        setSelectedSlot(null);
+    };
 
     // Request notification permissions when component mounts
     useEffect(() => {
@@ -758,6 +791,47 @@ export default function MyCalendar() {
                     </DialogActions>
                 </>
             )}
+        </Dialog>
+
+        {/* Dialog for selecting event type */}
+        <Dialog 
+            open={showSelectEventTypeDialog} 
+            onClose={() => setShowSelectEventTypeDialog(false)}
+        >
+            <DialogTitle>Cosa vuoi aggiungere?</DialogTitle>
+            <DialogContent>
+                <Box display="flex" flexDirection="column" gap={2} mt={1} minWidth="250px">
+                    <Button 
+                        variant="contained" 
+                        color="primary"
+                        onClick={() => handleCreateEventType('event')}
+                        fullWidth
+                    >
+                        Evento
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        color="secondary"
+                        onClick={() => handleCreateEventType('task')}
+                        fullWidth
+                    >
+                        Attività
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        style={{ backgroundColor: '#673ab7', color: 'white' }}
+                        onClick={() => handleCreateEventType('studyCycle')}
+                        fullWidth
+                    >
+                        Ciclo di Studio
+                    </Button>
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setShowSelectEventTypeDialog(false)} color="primary">
+                    Annulla
+                </Button>
+            </DialogActions>
         </Dialog>
     </>
     );
