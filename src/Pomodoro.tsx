@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Container, Grid, Box, TextField, Typography, FormHelperText } from '@mui/material';
+import { Button, Container, Grid, Box, TextField, Typography, FormHelperText, CircularProgress } from '@mui/material';
 import './Pomodoro.css';
 import axiosInstance from './api/axiosInstance';
 import { useLocation, useNavigate } from 'react-router';
@@ -33,6 +33,10 @@ const Pomodoro = () => {
   const [fromCalendar, setFromCalendar] = useState(false);
   const [eventId, setEventId] = useState<string | undefined>(undefined);
   const [initialCompletedCycles, setInitialCompletedCycles] = useState(0);
+  
+  // Add state for the countdown timer
+  const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -141,11 +145,31 @@ const Pomodoro = () => {
     if (currentCycle < cycles.length) {
       setIsActive(true);
       const time = isStudying ? cycles[currentCycle].study : cycles[currentCycle].break;
+      
+      // Set the initial time remaining in seconds
+      setTimeRemaining(time * 60);
+      
+      // Start the countdown timer
+      const interval = setInterval(() => {
+        setTimeRemaining(prev => {
+          if (prev <= 1) {
+            if (countdownInterval) clearInterval(countdownInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      setCountdownInterval(interval);
+      
       setTimer(setTimeout(() => {
         setIsStudying(!isStudying);
         if (!isStudying) {
           setCurrentCycle(currentCycle + 1);
         }
+        
+        // Clear the countdown when the cycle ends
+        if (countdownInterval) clearInterval(countdownInterval);
       }, time * 60000));
     } 
   };
@@ -172,6 +196,8 @@ const Pomodoro = () => {
 
   const resetCycle = () => {
     if (timer) clearTimeout(timer);
+    if (countdownInterval) clearInterval(countdownInterval);
+    setTimeRemaining(0);
     setCurrentCycle(0);
     setIsStudying(true);
     setIsActive(false);
@@ -179,6 +205,8 @@ const Pomodoro = () => {
 
   const endCycle = () => {
     if (timer) clearTimeout(timer);
+    if (countdownInterval) clearInterval(countdownInterval);
+    setTimeRemaining(0);
     setCurrentCycle(cycles.length);
     savePomodoroSession();
     setIsActive(false);
@@ -192,20 +220,61 @@ const Pomodoro = () => {
   useEffect(() => {
     if (currentCycle < cycles.length) {
       const time = isStudying ? cycles[currentCycle].study : cycles[currentCycle].break;
+      
+      // Reset the timer for the new cycle
+      setTimeRemaining(time * 60);
+      
+      // Clear any existing interval
+      if (countdownInterval) clearInterval(countdownInterval);
+      
+      // Start a new countdown if active
+      if (isActive) {
+        const interval = setInterval(() => {
+          setTimeRemaining(prev => {
+            if (prev <= 1) {
+              if (countdownInterval) clearInterval(countdownInterval);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        setCountdownInterval(interval);
+      }
+      
       const notification = isStudying ? 'Study time!' : 'Break time!';
-      alert(notification);
+      
       setTimer(setTimeout(() => {
         setIsStudying(!isStudying);
         if (!isStudying) {
           setCurrentCycle(currentCycle + 1);
         }
+        
+        // Clear the countdown when the cycle ends
+        if (countdownInterval) clearInterval(countdownInterval);
       }, time * 60000));
     } else if (cycles.length > 0 && currentCycle === cycles.length) {
       alert('All cycles completed!');
       setIsActive(false);
+      if (countdownInterval) clearInterval(countdownInterval);
       savePomodoroSession();
     } 
   }, [currentCycle, isStudying]);
+
+  // Clean up intervals on component unmount
+  useEffect(() => {
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (countdownInterval) clearInterval(countdownInterval);
+    };
+  }, [timer, countdownInterval]);
+
+  // Format the remaining time as MM:SS
+  const formatTimeRemaining = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   // Update study cycle progress in the event
   const updateStudyCycleProgress = async () => {
@@ -221,13 +290,17 @@ const Pomodoro = () => {
     }
   };
 
-  // Update the progress whenever the current cycle changes
-  useEffect(() => {
-    if (fromCalendar && eventId && currentCycle > initialCompletedCycles) {
-      updateStudyCycleProgress();
-    }
-  }, [currentCycle, fromCalendar, eventId]);
-
+  // Calculate progress percentage for circular progress
+  const calculateProgress = (): number => {
+    if (!isActive || currentCycle >= cycles.length) return 0;
+    
+    const totalSeconds = isStudying ? 
+      cycles[currentCycle].study * 60 : 
+      cycles[currentCycle].break * 60;
+      
+    return ((totalSeconds - timeRemaining) / totalSeconds) * 100;
+  };
+  
   return (
     <Grid 
       container
@@ -235,6 +308,50 @@ const Pomodoro = () => {
       sx={{ minHeight: '100vh', padding: 3 }}
     >
       <Grid sx={{ mr: 'auto', ml: 'auto' }} maxWidth={'sm'}>
+      
+      {/* Timer Display */}
+      {isActive && currentCycle < cycles.length && (
+        <Box 
+          display="flex" 
+          flexDirection="column" 
+          alignItems="center"
+          justifyContent="center" 
+          mb={4}
+          p={3}
+          border="2px solid"
+          borderColor={isStudying ? "#4caf50" : "#ff9800"}
+          borderRadius={2}
+          bgcolor={isStudying ? "rgba(76, 175, 80, 0.1)" : "rgba(255, 152, 0, 0.1)"}
+        >
+          <Typography variant="h4" mb={2} color={isStudying ? "success.main" : "yellow"}>
+            {isStudying ? "STUDY TIME" : "BREAK TIME"}
+          </Typography>
+          
+          <Box position="relative" display="flex" alignItems="center" justifyContent="center">
+            <CircularProgress 
+              variant="determinate" 
+              value={calculateProgress()} 
+              size={120} 
+              thickness={4}
+              style={isStudying ? {'color': 'green'}: {'color': 'yellow'}}
+            />
+            <Box
+              position="absolute"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Typography variant="h5" component="div" color={isStudying ? "success.main" : "yellow"}>
+                {formatTimeRemaining(timeRemaining)}
+              </Typography>
+            </Box>
+          </Box>
+          
+          <Typography variant="subtitle1" mt={2}>
+            Cycle {currentCycle + 1} of {cycles.length}
+          </Typography>
+        </Box>
+      )}
       
       {/* Show info if coming from calendar */}
       {fromCalendar && (
