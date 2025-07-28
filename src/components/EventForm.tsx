@@ -15,7 +15,7 @@ import { NotificationSetting, NotificationType, RepeatSetting } from '../types/m
 interface EventFormProps {
   open: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSave?: () => void;
   initialData?: Partial<CalendarEvent>;
 }
 
@@ -48,7 +48,6 @@ const EventForm = ({ open, onClose, onSave, initialData }: EventFormProps) => {
     invitedUsers: []
   });
 
-  // New state for notifications and invitations
   const [showNotificationForm, setShowNotificationForm] = useState(false);
   const [currentNotification, setCurrentNotification] = useState<NotificationSetting>({
     type: 'system',
@@ -152,8 +151,10 @@ const EventForm = ({ open, onClose, onSave, initialData }: EventFormProps) => {
       };
       
       const response = await axiosInstance.post('/events', eventData);
-      
-      onSave();
+      if (onSave) {
+        console.log("Calling onsave function:", response.data);
+        onSave();
+      }
       onClose();
     } catch (error) {
       console.error("Error creating event:", error);

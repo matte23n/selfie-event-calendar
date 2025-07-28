@@ -10,7 +10,6 @@ interface EventInfoDialogProps {
   event: CalendarEvent;
 }
 
-// Helper function to format notification text (same as in DialogProvider)
 const getNotificationText = (notification: any): string => {
   let text = `${notification.type.charAt(0).toUpperCase() + notification.type.slice(1)} notification `;
   
@@ -34,9 +33,7 @@ const getNotificationText = (notification: any): string => {
 };
 
 const EventInfoDialog: React.FC<EventInfoDialogProps> = ({ open, onClose, event }) => {
-  // Format dates for display - fix timezone issues
   const formatDate = (date: Date): string => {
-    // Use the full date object methods instead of toLocaleString to avoid timezone conversion issues
     const day = new Date(date).getDate().toString().padStart(2, '0');
     const month = (new Date(date).getMonth() + 1).toString().padStart(2, '0');
     const year = new Date(date).getFullYear();
@@ -87,7 +84,6 @@ const EventInfoDialog: React.FC<EventInfoDialogProps> = ({ open, onClose, event 
           </>
         )}
         
-        {/* Notifications Section */}
         <Box sx={{ mb: 2 }}>
           <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <NotificationsIcon sx={{ mr: 1 }} /> Notifications
@@ -111,7 +107,6 @@ const EventInfoDialog: React.FC<EventInfoDialogProps> = ({ open, onClose, event 
           )}
         </Box>
         
-        {/* Invitees Section */}
         <Box>
           <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
             <PeopleIcon sx={{ mr: 1 }} /> Invited Users

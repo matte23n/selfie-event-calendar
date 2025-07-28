@@ -7,15 +7,13 @@ import 'moment/locale/it';
 import ArrowRightIcon from '@mui/icons-material/ArrowRight';
 import ArrowLeftIcon from '@mui/icons-material/ArrowLeft';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord'; 
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect,  } from 'react';
 import EventInfoDialog from './EventInfoDialog';
 import axiosInstance from './api/axiosInstance';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Checkbox, Fab, Tooltip, Box, Typography } from '@mui/material';
-import SchoolIcon from '@mui/icons-material/School';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, Checkbox, Box, Typography } from '@mui/material';
 import { useNavigate } from 'react-router';
-import StudyCycleForm from './components/StudyCycleForm';
-import { StudyCycleData, Event, NotificationSetting } from './types/models';
-import { useDialogContext } from './DialogProvider';
+import {  NotificationSetting } from './types/models';
+import {  useDialogContext } from './DialogProvider';
 import { useTimeMachine } from './TimeMachineContext';
 import notificationService from './services/NotificationService';
 import eventNotificationService from './services/EventNotificationService';
@@ -23,7 +21,6 @@ import eventNotificationService from './services/EventNotificationService';
 const DnDCalendar = withDragAndDrop<CalendarEvent, CalendarResource>(Calendar)
 const myLocalizer = momentLocalizer(moment)
 
-// We still need these interfaces for the Calendar component
 export interface CalendarEvent {
     _id?: number;
     title?: string;
@@ -54,7 +51,6 @@ export interface InvitedUser {
     username: string;
 }
 
-// Aggiungi questa interfaccia per le attività
 export interface Task {
     _id?: number;
     title?: string;
@@ -87,8 +83,8 @@ export default function MyCalendar() {
     const [view, setView] = useState<View>(Views.MONTH);
     const [date, setDate] = useState(new Date());
     const navigate = useNavigate();
-    const { setShowStudyCycleForm, setShowEventForm, setShowTaskForm } = useDialogContext();
-    const { currentTime, isInPast, isInFuture } = useTimeMachine();
+    const { setShowStudyCycleForm, setShowEventForm, setShowTaskForm, setRefreshCallbacks } = useDialogContext();
+    const { currentTime, isInPast } = useTimeMachine();
     const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(false);
     const [notifiedTasksCache, setNotifiedTasksCache] = useState<Record<string, boolean>>({});
     const [selectedSlot, setSelectedSlot] = useState<{ start: Date } | null>(null);
@@ -163,12 +159,8 @@ export default function MyCalendar() {
                 axiosInstance.get('/study-cycles')
             ]);
             
-            // Combine regular events and study cycle events
             const events = eventsRes.data || [];
             const studyCycles = studyCyclesRes.data || [];
-            /*...studyCycles.filter((sc: StudyCycleData) => 
-                !events.some((e: Event) => e._id === sc._id)
-            )*/
             const allEvents = [...events.map((event: any) => ({
                 ...event,
                 startDate: new Date(event.startDate),
@@ -202,6 +194,7 @@ export default function MyCalendar() {
     useEffect(() => {
         fetchEvents();
         fetchTasks();
+        setRefreshCallbacks({refreshEvents: fetchEvents, refreshTasks: fetchTasks})
     }, []);
 
     useEffect(() => {
@@ -270,7 +263,6 @@ export default function MyCalendar() {
 
     // Function to determine task urgency based on due date
     const getTaskUrgency = (task: Task) => {
-        console.log('aaa');
         if (task.completed) return 'completed';
         
         const dueDate = new Date(task.dueDate);
@@ -412,7 +404,7 @@ export default function MyCalendar() {
         // Set up event listener for opening tasks from notifications
         const handleOpenTask = (event: CustomEvent) => {
             const taskId = event.detail;
-            const task = tasks.find(t => t._id == taskId);
+            const task = tasks.find(t => t._id === taskId);
             if (task) {
                 setSelectedTask(task);
             }
@@ -423,7 +415,7 @@ export default function MyCalendar() {
             const { tag } = event.detail;
             if (tag && tag.startsWith('task-')) {
                 const taskId = tag.replace('task-', '').split('-')[0];
-                const task = tasks.find(t => t._id == taskId);
+                const task = tasks.find(t => t._id === taskId);
                 if (task) {
                     checkAndNotifyTask(task, true); // force notification
                 }
@@ -504,7 +496,7 @@ export default function MyCalendar() {
         const handleOpenEvent = (event: CustomEvent) => {
             const eventId = event.detail?.eventId;
             if (eventId) {
-                const foundEvent = myEvents.find(e => e._id == eventId);
+                const foundEvent = myEvents.find(e => e._id === eventId);
                 if (foundEvent) {
                     setSelectedEvent(foundEvent);
                     setOpenedDialog(true);
@@ -521,7 +513,8 @@ export default function MyCalendar() {
         };
     }, [myEvents]);
 
-    return (<>
+    return (
+            <>
         <div style={{ display: 'flex', height: '85vh' }}>
             <div style={{ flex: 2, height: '100%', position: 'relative' }}>
                 <DnDCalendar

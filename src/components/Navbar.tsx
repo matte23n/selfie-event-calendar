@@ -14,8 +14,7 @@ const Navbar: React.FC = () => {
   const [fabOpen, setFabOpen] = useState(false);
   const location = useLocation();
   const { setShowEventForm, setShowTaskForm, setShowStudyCycleForm } = useDialogContext();
-  
-  // Close FAB menu when route changes
+
   useEffect(() => {
     setFabOpen(false);
   }, [location.pathname]);
@@ -23,17 +22,17 @@ const Navbar: React.FC = () => {
   const handleFabClick = () => {
     setFabOpen(!fabOpen);
   };
-  
+
   const handleOpenEventForm = () => {
     setFabOpen(false);
     setShowEventForm(true);
   };
-  
+
   const handleOpenTaskForm = () => {
     setFabOpen(false);
     setShowTaskForm(true);
   };
-  
+
   const handleOpenStudyCycleForm = () => {
     setFabOpen(false);
     setShowStudyCycleForm(true);
@@ -46,50 +45,58 @@ const Navbar: React.FC = () => {
           <Typography variant="h6" component="div" sx={{ flexGrow: 0, mr: 2 }}>
             Selfie Event Calendar
           </Typography>
-          
-          {/* Only show TimeMachineControl if authenticated */}
           {isAuthenticated && <TimeMachineControl />}
-          
-          <Box sx={{ flexGrow: 1 }} /> {/* Push links to the end */}
-          
-          {/* Only show navigation buttons if authenticated */}
+          <Box sx={{ flexGrow: 1 }} />
           {isAuthenticated ? (
             <>
               <Box>
-                <Button color="inherit" component={Link} to="/">Home</Button>
-                <Button color="inherit" component={Link} to="/calendario">Calendario</Button>
-                <Button color="inherit" component={Link} to="/pomodoro">Pomodoro</Button>
-                <Button color="inherit" component={Link} to="/note">Note</Button>
-                <Button color="inherit" component={Link} to="/progetti">Progetti</Button>
-                <Button color="inherit" onClick={logout}>Logout</Button>
+                <Button color="inherit" component={Link} to="/">
+                  Home
+                </Button>
+                <Button color="inherit" component={Link} to="/calendario">
+                  Calendario
+                </Button>
+                <Button color="inherit" component={Link} to="/pomodoro">
+                  Pomodoro
+                </Button>
+                <Button color="inherit" component={Link} to="/note">
+                  Note
+                </Button>
+                <Button color="inherit" component={Link} to="/progetti">
+                  Progetti
+                </Button>
+                <Button color="inherit" onClick={logout}>
+                  Logout
+                </Button>
               </Box>
             </>
           ) : (
             <Box>
-              <Button color="inherit" component={Link} to="/login">Login</Button>
-              <Button color="inherit" component={Link} to="/signup">Signup</Button>
+              <Button color="inherit" component={Link} to="/login">
+                Login
+              </Button>
+              <Button color="inherit" component={Link} to="/signup">
+                Signup
+              </Button>
             </Box>
           )}
         </Toolbar>
       </AppBar>
-
-      {/* Floating Action Button for adding events and tasks */}
       {isAuthenticated && (
         <Box sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 1000 }}>
-          {/* Study Cycle Button - Shows when expanded */}
           <Zoom in={fabOpen} style={{ transitionDelay: fabOpen ? '300ms' : '0ms' }}>
             <Tooltip title="Schedule Study Cycles" placement="left">
-              <Fab 
-                size="medium" 
-                color="info" // Change from 'secondary' to 'info' for a different blue color
-                sx={{ 
-                  position: 'absolute', 
-                  bottom: 190, 
+              <Fab
+                size="medium"
+                color="info"
+                sx={{
+                  position: 'absolute',
+                  bottom: 190,
                   right: 8,
-                  bgcolor: '#673ab7', // Custom purple color matching the study cycles in calendar
+                  bgcolor: '#673ab7',
                   '&:hover': {
-                    bgcolor: '#5e35b1' // Darker shade for hover
-                  }
+                    bgcolor: '#5e35b1',
+                  },
                 }}
                 onClick={handleOpenStudyCycleForm}
               >
@@ -97,27 +104,18 @@ const Navbar: React.FC = () => {
               </Fab>
             </Tooltip>
           </Zoom>
-
-          {/* Task Button - Shows when expanded */}
           <Zoom in={fabOpen} style={{ transitionDelay: fabOpen ? '150ms' : '0ms' }}>
             <Tooltip title="Add Task" placement="left">
-              <Fab 
-                size="medium" 
-                color="secondary" 
-                sx={{ position: 'absolute', bottom: 130, right: 8 }}
-                onClick={handleOpenTaskForm}
-              >
+              <Fab size="medium" color="secondary" sx={{ position: 'absolute', bottom: 130, right: 8 }} onClick={handleOpenTaskForm}>
                 <TaskIcon />
               </Fab>
             </Tooltip>
           </Zoom>
-
-          {/* Event Button - Shows when expanded */}
           <Zoom in={fabOpen} style={{ transitionDelay: fabOpen ? '0ms' : '0ms' }}>
             <Tooltip title="Add Event" placement="left">
-              <Fab 
-                size="medium" 
-                color="primary" 
+              <Fab
+                size="medium"
+                color="primary"
                 sx={{ position: 'absolute', bottom: 70, right: 8 }}
                 onClick={handleOpenEventForm}
               >
@@ -125,15 +123,13 @@ const Navbar: React.FC = () => {
               </Fab>
             </Tooltip>
           </Zoom>
-
-          {/* Main FAB Button */}
-          <Tooltip title={fabOpen ? "Close" : "Add New"}>
-            <Fab 
-              color="primary" 
+          <Tooltip title={fabOpen ? 'Close' : 'Add New'}>
+            <Fab
+              color="primary"
               onClick={handleFabClick}
-              sx={{ 
+              sx={{
                 transform: fabOpen ? 'rotate(45deg)' : 'none',
-                transition: 'transform 0.3s'
+                transition: 'transform 0.3s',
               }}
             >
               <AddIcon />

@@ -8,7 +8,7 @@ import axiosInstance from '../api/axiosInstance';
 interface StudyCycleFormProps {
     open: boolean;
     onClose: () => void;
-    onSave: () => void;
+    onSave?: () => void;
     date?: Date;
 }
 
@@ -18,37 +18,33 @@ const StudyCycleForm = ({ open, onClose, onSave, date = new Date() }: StudyCycle
     const [breakTime, setBreakTime] = useState(5);
     const [totalCycles, setTotalCycles] = useState(4);
     const [selectedDate, setSelectedDate] = useState(
-        new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 10)
+        new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
     );
     const [startTime, setStartTime] = useState(
         new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     );
 
-    // Reset form when dialog opens
     React.useEffect(() => {
         if (open) {
             setTitle('');
             setStudyTime(25);
             setBreakTime(5);
             setTotalCycles(4);
-            setSelectedDate(new Date(date.getTime() - (date.getTimezoneOffset() * 60000)).toISOString().slice(0, 10));
+            setSelectedDate(new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10));
             setStartTime(new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         }
     }, [open, date]);
 
     const handleSubmit = async () => {
         try {
-            // Create start date by combining the date and time
             const [hours, minutes] = startTime.split(':').map(Number);
             const startDate = new Date(selectedDate);
             startDate.setHours(hours || 0, minutes || 0, 0);
 
-            // Calculate the end date based on total study and break time
             const totalMinutes = (studyTime + breakTime) * totalCycles;
             const endDate = new Date(startDate);
             endDate.setMinutes(endDate.getMinutes() + totalMinutes);
 
-            // Create the study cycle event
             const studyCycleEvent = {
                 title,
                 startDate: startDate.toISOString(),
@@ -65,7 +61,9 @@ const StudyCycleForm = ({ open, onClose, onSave, date = new Date() }: StudyCycle
             };
 
             await axiosInstance.post('/study-cycles', studyCycleEvent);
+            if (onSave) {
             onSave();
+            }
             onClose();
         } catch (error) {
             console.error('Error creating study cycle:', error);
@@ -129,7 +127,7 @@ const StudyCycleForm = ({ open, onClose, onSave, date = new Date() }: StudyCycle
                         margin="normal"
                         InputLabelProps={{ shrink: true }}
                         inputProps={{
-                            step: 300 // 5 min
+                            step: 300
                         }}
                     />
 

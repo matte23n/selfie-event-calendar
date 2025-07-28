@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Container, Grid, Box, TextField, Typography, FormHelperText, CircularProgress } from '@mui/material';
+import { Button, Grid, Box, TextField, Typography, FormHelperText, CircularProgress } from '@mui/material';
 import './Pomodoro.css';
 import axiosInstance from './api/axiosInstance';
 import { useLocation, useNavigate } from 'react-router';
@@ -34,14 +34,12 @@ const Pomodoro = () => {
   const [eventId, setEventId] = useState<string | undefined>(undefined);
   const [initialCompletedCycles, setInitialCompletedCycles] = useState(0);
   
-  // Add state for the countdown timer
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
   
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Check if we're coming from a calendar event
   useEffect(() => {
     const state = location.state as LocationState;
     
@@ -49,32 +47,27 @@ const Pomodoro = () => {
       setEventId(state.eventId);
       setFromCalendar(true);
       
-      // Populate the form fields with the data from the calendar event
       if (state.studyTime) setStudyTime(state.studyTime);
       if (state.breakTime) setBreakTime(state.breakTime);
       if (state.totalTime) setTotalTime(state.totalTime);
       
       if (state.totalCycles) {
-        // Create cycles based on the calendar event
         const newCycles = Array(state.totalCycles).fill({}).map(() => ({
           study: state.studyTime || 25,
           break: state.breakTime || 5
         }));
         setCycles(newCycles);
         
-        // Set the starting cycle based on completed cycles
         setCurrentCycle(state.completedCycles || 0);
         setInitialCompletedCycles(state.completedCycles || 0);
       }
     }
     
-    // Clear location state after reading
     if (location.state) {
       navigate(location.pathname, { replace: true });
     }
   }, [location]);
 
-  // Fetch pomodoro history on component mount
   useEffect(() => {
     fetchPomodoroHistory();
   }, []);
@@ -89,15 +82,12 @@ const Pomodoro = () => {
   };
 
   const calculateCycles = () => {
-    // Clear previous errors
     setError('');
     
     let totalMinutes = 0;
     
-    // Check if the input includes a colon (HH:MM format)
     if (totalTime.includes(':')) {
       const [hours, minutes] = totalTime.split(':').map(num => parseInt(num, 10));
-      // Validate that both hours and minutes are valid numbers
       if (!isNaN(hours) && !isNaN(minutes)) {
         totalMinutes = (hours * 60) + minutes;
       } else {
@@ -105,7 +95,6 @@ const Pomodoro = () => {
         return;
       }
     } else {
-      // Try to parse as minutes
       totalMinutes = parseInt(totalTime, 10);
       if (isNaN(totalMinutes)) {
         setError('Please enter a valid time value.');
@@ -113,13 +102,11 @@ const Pomodoro = () => {
       }
     }
     
-    // Validate that we have a positive number of minutes
     if (totalMinutes <= 0) {
       setError('Please enter a time greater than zero.');
       return;
     }
     
-    // Validate that study and break times are valid
     if (studyTime <= 0 || breakTime < 0) {
       setError('Study time must be greater than zero and break time must be non-negative.');
       return;
@@ -146,10 +133,8 @@ const Pomodoro = () => {
       setIsActive(true);
       const time = isStudying ? cycles[currentCycle].study : cycles[currentCycle].break;
       
-      // Set the initial time remaining in seconds
       setTimeRemaining(time * 60);
       
-      // Start the countdown timer
       const interval = setInterval(() => {
         setTimeRemaining(prev => {
           if (prev <= 1) {
@@ -168,7 +153,6 @@ const Pomodoro = () => {
           setCurrentCycle(currentCycle + 1);
         }
         
-        // Clear the countdown when the cycle ends
         if (countdownInterval) clearInterval(countdownInterval);
       }, time * 60000));
     } 
@@ -188,7 +172,7 @@ const Pomodoro = () => {
       };
       
       await axiosInstance.post('/pomodoros', pomodoroData);
-      fetchPomodoroHistory(); // Refresh history
+      fetchPomodoroHistory(); 
     } catch (error) {
       console.error('Error saving pomodoro session:', error);
     }
@@ -211,7 +195,6 @@ const Pomodoro = () => {
     savePomodoroSession();
     setIsActive(false);
     
-    // If from calendar, update the progress
     if (fromCalendar && eventId) {
       updateStudyCycleProgress();
     }
@@ -221,13 +204,10 @@ const Pomodoro = () => {
     if (currentCycle < cycles.length) {
       const time = isStudying ? cycles[currentCycle].study : cycles[currentCycle].break;
       
-      // Reset the timer for the new cycle
       setTimeRemaining(time * 60);
       
-      // Clear any existing interval
       if (countdownInterval) clearInterval(countdownInterval);
       
-      // Start a new countdown if active
       if (isActive) {
         const interval = setInterval(() => {
           setTimeRemaining(prev => {
@@ -250,7 +230,6 @@ const Pomodoro = () => {
           setCurrentCycle(currentCycle + 1);
         }
         
-        // Clear the countdown when the cycle ends
         if (countdownInterval) clearInterval(countdownInterval);
       }, time * 60000));
     } else if (cycles.length > 0 && currentCycle === cycles.length) {
@@ -261,7 +240,6 @@ const Pomodoro = () => {
     } 
   }, [currentCycle, isStudying]);
 
-  // Clean up intervals on component unmount
   useEffect(() => {
     return () => {
       if (timer) clearTimeout(timer);
@@ -269,14 +247,12 @@ const Pomodoro = () => {
     };
   }, [timer, countdownInterval]);
 
-  // Format the remaining time as MM:SS
   const formatTimeRemaining = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  // Update study cycle progress in the event
   const updateStudyCycleProgress = async () => {
     if (eventId && fromCalendar) {
       try {
@@ -290,7 +266,6 @@ const Pomodoro = () => {
     }
   };
 
-  // Calculate progress percentage for circular progress
   const calculateProgress = (): number => {
     if (!isActive || currentCycle >= cycles.length) return 0;
     

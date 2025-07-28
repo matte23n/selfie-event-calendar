@@ -38,7 +38,6 @@ const Progetti = () => {
       
       await axiosInstance.post('/projects', projectToAdd);
       
-      // Reset form
       setNewProject({
         name: '',
         description: '',
@@ -46,11 +45,8 @@ const Progetti = () => {
         status: 'not-started'
       });
       
-      // Refresh projects list
       fetchProjects();
-    } catch (error) {
-      console.error('Error adding project:', error);
-    }
+    } catch (error) {}
   };
 
   const handleUpdateStatus = async (projectId: string, newStatus: string) => {
@@ -63,7 +59,6 @@ const Progetti = () => {
         status: newStatus
       });
       
-      // Update local state
       setProjects(projects.map(p => 
         p._id === projectId ? { ...p, status: newStatus as 'not-started' | 'in-progress' | 'completed' } : p
       ));
@@ -83,7 +78,7 @@ const Progetti = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'not-started': return '#f44336'; // Red
+      case 'not-started': return '#f44336'; 
       case 'in-progress': return '#ff9800'; // Orange
       case 'completed': return '#4caf50'; // Green
       default: return '#2196f3'; // Blue

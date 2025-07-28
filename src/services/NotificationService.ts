@@ -7,9 +7,9 @@ interface NotificationOptions {
   icon?: string;
   tag?: string;
   requireInteraction?: boolean;
-  renotifyInterval?: number; // in minutes
+  renotifyInterval?: number;
   data?: any;
-  usePush?: boolean; // Whether to use push notification via ServiceWorker
+  usePush?: boolean;
 }
 
 class NotificationService {
@@ -79,9 +79,6 @@ class NotificationService {
     return await this.checkPermission();
   }
 
-  /**
-   * Shows a notification with the given options
-   */
   public async showNotification(options: NotificationOptions): Promise<Notification | null> {
     const hasPermission = await this.checkPermission();
     
@@ -91,7 +88,6 @@ class NotificationService {
     }
 
     try {
-      // If there's an existing notification with same tag, close it
       if (options.tag && this.activeNotifications.has(options.tag)) {
         this.activeNotifications.get(options.tag)?.notification.close();
         if (this.activeNotifications.get(options.tag)?.timerId) {
@@ -99,7 +95,6 @@ class NotificationService {
         }
       }
 
-      // If using push notification via ServiceWorker
       if (options.usePush && 'serviceWorker' in navigator) {
         const registration = await this.getServiceWorkerRegistration();
         if (registration) {
@@ -113,11 +108,8 @@ class NotificationService {
             actions: options.data?.actions || []
           });
           
-          // We don't have direct access to the Notification object with ServiceWorker
-          // but we'll create a placeholder for our tracking
           const placeholderNotification = {
             close: () => {
-              // This is a placeholder close method
               console.log('Closing push notification placeholder');
             },
             data: options.data,
@@ -127,7 +119,6 @@ class NotificationService {
           if (options.tag) {
             let timerId: number | undefined = undefined;
             
-            // Set up renotify if specified
             if (options.renotifyInterval) {
               timerId = window.setTimeout(() => {
                 this.showNotification(options);
@@ -144,7 +135,6 @@ class NotificationService {
         }
       }
 
-      // Fall back to regular browser notification
       const notification = new Notification(options.title, {
         body: options.body,
         icon: options.icon || '/notification-icon.png',
@@ -153,12 +143,9 @@ class NotificationService {
         data: options.data
       });
 
-      // Set up notification event handlers
       notification.onclick = (event) => {
-        // Focus on the window/tab when notification is clicked
         window.focus();
         
-        // Handle click based on notification data
         if (notification.data?.action === 'openTask') {
           window.dispatchEvent(new CustomEvent('openTask', { 
             detail: notification.data.taskId 
@@ -178,14 +165,11 @@ class NotificationService {
         }
       };
 
-      // Store the notification if it has a tag
       if (options.tag) {
         let timerId: number | undefined = undefined;
         
-        // Set up renotify if specified
         if (options.renotifyInterval) {
           timerId = window.setTimeout(() => {
-            // Close old notification and create a new one
             notification.close();
             this.showNotification(options);
           }, options.renotifyInterval * 60 * 1000);
@@ -204,16 +188,12 @@ class NotificationService {
     }
   }
 
-  /**
-   * Shows task notification with appropriate urgency
-   */
   public async notifyTask(task: Task, urgencyLevel: string): Promise<void> {
     if (!task._id) return;
     
     const taskId = task._id.toString();
     const dueDate = new Date(task.dueDate);
     
-    // Construct notification options based on urgency
     let title = '';
     let body = '';
     let requireInteraction = false;
@@ -224,18 +204,18 @@ class NotificationService {
         title = '🔴 SCADUTO: ' + task.title;
         body = `Questa attività è scaduta il ${dueDate.toLocaleDateString()}`;
         requireInteraction = true;
-        renotifyInterval = 30; // Remind every 30 minutes
+        renotifyInterval = 30;
         break;
       case 'urgent':
         title = '⚠️ URGENTE: ' + task.title;
         body = `Questa attività scade entro le prossime 24 ore!`;
         requireInteraction = true;
-        renotifyInterval = 60; // Remind every hour
+        renotifyInterval = 60;
         break;
       case 'high':
         title = '❗ Alta Priorità: ' + task.title;
         body = `Questa attività scade tra pochi giorni (${dueDate.toLocaleDateString()})`;
-        renotifyInterval = 120; // Remind every 2 hours
+        renotifyInterval = 120;
         break;
       case 'medium':
         title = '❕ Promemoria: ' + task.title;
@@ -253,7 +233,7 @@ class NotificationService {
       tag: `task-${taskId}-${urgencyLevel}`,
       requireInteraction,
       renotifyInterval,
-      usePush: true, // Use push notification for tasks
+      usePush: true,
       data: {
         action: 'openTask',
         taskId: taskId
@@ -261,9 +241,6 @@ class NotificationService {
     });
   }
 
-  /**
-   * Notify user of date change
-   */
   public async notifyDateChange(date: Date): Promise<void> {
     const formattedDate = date.toLocaleDateString(undefined, { 
       weekday: 'long', 
@@ -282,15 +259,11 @@ class NotificationService {
       body: `La Time Machine è stata impostata a: ${formattedDate}, ${formattedTime}`,
       tag: 'time-machine-change',
       requireInteraction: true,
-      usePush: true // Use push notification for time changes
+      usePush: true
     });
   }
 
-  /**
-   * Snooze a notification for the specified number of minutes
-   */
   public snoozeNotification(tag: string, minutes: number = 15): void {
-    // Close existing notification if it's active
     if (this.activeNotifications.has(tag)) {
       this.activeNotifications.get(tag)?.notification.close();
       
@@ -301,14 +274,11 @@ class NotificationService {
       this.activeNotifications.delete(tag);
     }
     
-    // Clear existing snooze timer if any
     if (this.snoozeTimers.has(tag)) {
       clearTimeout(this.snoozeTimers.get(tag));
     }
     
-    // Set a new snooze timer
     const timerId = window.setTimeout(() => {
-      // After snooze period, dispatch an event to re-check this task
       window.dispatchEvent(new CustomEvent('checkTask', { 
         detail: { tag }
       }));
@@ -319,9 +289,6 @@ class NotificationService {
     this.snoozeTimers.set(tag, timerId);
   }
 
-  /**
-   * Cancel all active notifications
-   */
   public clearAllNotifications(): void {
     this.activeNotifications.forEach(({ notification, timerId }) => {
       notification.close();
@@ -336,6 +303,5 @@ class NotificationService {
   }
 }
 
-// Singleton instance
 export const notificationService = new NotificationService();
 export default notificationService;

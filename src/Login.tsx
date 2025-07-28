@@ -11,7 +11,6 @@ const Login: React.FC = () => {
     const { login, isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
-    // Add useEffect to handle redirection when authentication state changes
     useEffect(() => {
         if (isAuthenticated) {
             navigate('/calendario', { replace: true });
@@ -24,7 +23,6 @@ const Login: React.FC = () => {
 
         try {
             const response = await axiosInstance.post('/login', { username, password });
-            // Just set the token in the AuthProvider - the redirection will be handled by the useEffect above
             login(response.data.token);
         } catch (err: any) {
             setError(err.response?.data?.message || 'An error occurred. Please try again.');

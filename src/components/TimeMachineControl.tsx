@@ -21,7 +21,6 @@ const TimeMachineControl: React.FC = () => {
     currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   );
 
-  // Update input fields when currentTime changes
   useEffect(() => {
     setDateInput(currentTime.toISOString().slice(0, 10));
     setTimeInput(currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -29,29 +28,19 @@ const TimeMachineControl: React.FC = () => {
 
   const handleApplyDateTime = () => {
     try {
-      // Parse the time input
       const [hours, minutes] = timeInput.split(':').map(Number);
-      
-      // Create a new date from the date input
       const newDateTime = new Date(dateInput);
-      
-      // Set the time components
       newDateTime.setHours(hours || 0, minutes || 0, 0, 0);
-      
-      // Apply the new date/time to the TimeMachine - this will trigger notifications
       setTime(newDateTime);
-      
-      // Close the dropdown
       setOpen(false);
     } catch (error) {
       console.error('Error applying date/time:', error);
     }
   };
 
-  // Format the date for display
   const formattedDate = currentTime.toLocaleDateString();
   const formattedTime = currentTime.toLocaleTimeString();
-  const isSystemTime = Math.abs(currentTime.getTime() - new Date().getTime()) < 1000; // Within 1 second
+  const isSystemTime = Math.abs(currentTime.getTime() - new Date().getTime()) < 1000;
 
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', mx: 2, position: 'relative' }}>
@@ -183,7 +172,6 @@ const TimeMachineControl: React.FC = () => {
             startIcon={<RestartAltIcon />} 
             onClick={() => {
               resetToSystemTime();
-              // The input fields will be updated via the useEffect
             }}
             fullWidth
             sx={{

@@ -24,77 +24,68 @@ function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch events
-        try {
-          setLoading(prev => ({ ...prev, events: true }));
-          const eventsResponse = await axiosInstance.get('/events');
-          if (eventsResponse.data && eventsResponse.data.length > 0) {
-            setEvents(eventsResponse.data.slice(0, 3));
-          }
-          setLoading(prev => ({ ...prev, events: false }));
-        } catch (error) {
-          console.error('Error fetching events:', error);
-          setLoading(prev => ({ ...prev, events: false }));
+        setLoading(prev => ({ ...prev, events: true }));
+        const eventsResponse = await axiosInstance.get('/events');
+        if (eventsResponse.data && eventsResponse.data.length > 0) {
+          setEvents(eventsResponse.data.slice(0, 3));
         }
-
-        // Fetch notes
-        try {
-          setLoading(prev => ({ ...prev, notes: true }));
-          const notesResponse = await axiosInstance.get('/notes');
-          if (notesResponse.data && notesResponse.data.length > 0) {
-            const sortedNotes = notesResponse.data.sort((a: Note, b: Note) => {
-              const dateA = a.lastMod ? new Date(a.lastMod) : new Date(a.lastMod);
-              const dateB = b.lastMod ? new Date(b.lastMod) : new Date(b.lastMod);
-              return dateB.getTime() - dateA.getTime();
-            });
-            setLatestNote(sortedNotes[0]);
-          }
-          setLoading(prev => ({ ...prev, notes: false }));
-        } catch (error) {
-          console.error('Error fetching notes:', error);
-          setLoading(prev => ({ ...prev, notes: false }));
-        }
-
-        // Fetch activities
-        try {
-          setLoading(prev => ({ ...prev, activities: true }));
-          const activitiesResponse = await axiosInstance.get('/activities');
-          if (activitiesResponse.data && activitiesResponse.data.length > 0) {
-            setUpcomingActivities(activitiesResponse.data.slice(0, 3));
-          }
-          setLoading(prev => ({ ...prev, activities: false }));
-        } catch (error) {
-          console.error('Error fetching activities:', error);
-          setLoading(prev => ({ ...prev, activities: false }));
-        }
-
-        // Fetch pomodoro data - now using real backend API
-        try {
-          setLoading(prev => ({ ...prev, pomodoro: true }));
-          const pomodoroResponse = await axiosInstance.get('/pomodoros/latest');
-          if (pomodoroResponse.data) {
-            setLastPomodoro(pomodoroResponse.data);
-          }
-          setLoading(prev => ({ ...prev, pomodoro: false }));
-        } catch (error) {
-          console.error('Error fetching pomodoro data:', error);
-          setLoading(prev => ({ ...prev, pomodoro: false }));
-        }
-
-        // Fetch project deadlines - now using real backend API
-        try {
-          setLoading(prev => ({ ...prev, projects: true }));
-          const projectsResponse = await axiosInstance.get('/projects');
-          if (projectsResponse.data && projectsResponse.data.length > 0) {
-            setProjectDeadlines(projectsResponse.data);
-          }
-          setLoading(prev => ({ ...prev, projects: false }));
-        } catch (error) {
-          console.error('Error fetching project deadlines:', error);
-          setLoading(prev => ({ ...prev, projects: false }));
-        }
+        setLoading(prev => ({ ...prev, events: false }));
       } catch (error) {
-        console.error('Error in data fetching:', error);
+        console.error('Error fetching events:', error);
+        setLoading(prev => ({ ...prev, events: false }));
+      }
+
+      try {
+        setLoading(prev => ({ ...prev, notes: true }));
+        const notesResponse = await axiosInstance.get('/notes');
+        if (notesResponse.data && notesResponse.data.length > 0) {
+          const sortedNotes = notesResponse.data.sort((a: Note, b: Note) => {
+            const dateA = a.lastMod ? new Date(a.lastMod) : new Date(a.lastMod);
+            const dateB = b.lastMod ? new Date(b.lastMod) : new Date(b.lastMod);
+            return dateB.getTime() - dateA.getTime();
+          });
+          setLatestNote(sortedNotes[0]);
+        }
+        setLoading(prev => ({ ...prev, notes: false }));
+      } catch (error) {
+        console.error('Error fetching notes:', error);
+        setLoading(prev => ({ ...prev, notes: false }));
+      }
+
+      try {
+        setLoading(prev => ({ ...prev, activities: true }));
+        const activitiesResponse = await axiosInstance.get('/activities');
+        if (activitiesResponse.data && activitiesResponse.data.length > 0) {
+          setUpcomingActivities(activitiesResponse.data.slice(0, 3));
+        }
+        setLoading(prev => ({ ...prev, activities: false }));
+      } catch (error) {
+        console.error('Error fetching activities:', error);
+        setLoading(prev => ({ ...prev, activities: false }));
+      }
+
+      try {
+        setLoading(prev => ({ ...prev, pomodoro: true }));
+        const pomodoroResponse = await axiosInstance.get('/pomodoros/latest');
+        if (pomodoroResponse.data) {
+          setLastPomodoro(pomodoroResponse.data);
+        }
+        setLoading(prev => ({ ...prev, pomodoro: false }));
+      } catch (error) {
+        console.error('Error fetching pomodoro data:', error);
+        setLoading(prev => ({ ...prev, pomodoro: false }));
+      }
+
+      try {
+        setLoading(prev => ({ ...prev, projects: true }));
+        const projectsResponse = await axiosInstance.get('/projects');
+        if (projectsResponse.data && projectsResponse.data.length > 0) {
+          setProjectDeadlines(projectsResponse.data);
+        }
+        setLoading(prev => ({ ...prev, projects: false }));
+      } catch (error) {
+        console.error('Error fetching project deadlines:', error);
+        setLoading(prev => ({ ...prev, projects: false }));
       }
     };
 

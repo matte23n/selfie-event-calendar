@@ -8,7 +8,7 @@ import axiosInstance from '../api/axiosInstance';
 interface TaskFormProps {
   open: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSave?: () => void;
   initialData?: Partial<Task>;
 }
 
@@ -25,26 +25,24 @@ const TaskForm = ({ open, onClose, onSave, initialData }: TaskFormProps) => {
     title: '',
     startDate: new Date(),
     dueDate: new Date(),
-    completed: false
+    completed: false,
   });
 
-  // Initialize form with initial data when dialog opens
   useEffect(() => {
     if (open && initialData) {
       setNewTask({
         ...newTask,
-        ...initialData
+        ...initialData,
       });
     } else if (open) {
-      // Reset to default values when opening without initial data
       setNewTask({
         title: '',
         startDate: new Date(),
         dueDate: new Date(),
-        completed: false
+        completed: false,
       });
     }
-  }, [open, initialData]);
+  }, [open, initialData, newTask]);
 
   const handleTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,8 +52,9 @@ const TaskForm = ({ open, onClose, onSave, initialData }: TaskFormProps) => {
         startDate: newTask.startDate.toISOString(),
         dueDate: newTask.dueDate.toISOString()
       });
-      
+      if (onSave) {
       onSave();
+      }
       onClose();
     } catch (error) {
       console.error('Error creating task:', error);
