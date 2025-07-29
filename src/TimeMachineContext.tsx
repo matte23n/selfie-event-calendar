@@ -26,49 +26,21 @@ const TimeMachineContext = createContext<TimeMachineContextType>({
 
 export const TimeMachineProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [currentTime, setCurrentTime] = useState(timeMachineService.getCurrentTime());
-  const [previousDay, setPreviousDay] = useState(new Date(currentTime).setHours(0, 0, 0, 0));
 
   const updateTime = (newTime: Date) => {
-    const newDay = new Date(newTime).setHours(0, 0, 0, 0);
-    const oldDay = new Date(currentTime).setHours(0, 0, 0, 0);
-    
+    timeMachineService.setTime(newTime); // Update the virtual time in the service
     setCurrentTime(newTime);
-    
-    if (newDay !== oldDay) {
-      notificationService.notifyDateChange(newTime);
-      setPreviousDay(newDay);
-      
-      window.dispatchEvent(new CustomEvent('timeMachineChanged', {
-        detail: { newDate: newTime }
-      }));
-    }
   };
 
   useEffect(() => {
     const unsubscribe = timeMachineService.addListener((time) => {
       setCurrentTime(new Date(time));
     });
-    
-    const interval = setInterval(() => {
-      if (timeMachineService.isUsingSystemTime()) {
-        setCurrentTime(new Date());
-      }
-    }, 60000);
 
     return () => {
       unsubscribe();
-      clearInterval(interval);
     };
   }, []);
-
-  useEffect(() => {
-    const currentDay = new Date(currentTime).setHours(0, 0, 0, 0);
-    
-    if (currentDay !== previousDay) {
-      notificationService.notifyDateChange(currentTime);
-      setPreviousDay(currentDay);
-    }
-  }, [currentTime, previousDay]);
 
   const contextValue = {
     currentTime,

@@ -11,7 +11,7 @@ axiosInstance.interceptors.request.use(
     const virtualTime = timeMachineService.getCurrentTime().toISOString();
     config.params = {
       ...config.params,
-      virtualTime: virtualTime,
+      virtualTime,
     };
     const token = localStorage.getItem('token');
     if (token) {

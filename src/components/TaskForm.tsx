@@ -42,7 +42,7 @@ const TaskForm = ({ open, onClose, onSave, initialData }: TaskFormProps) => {
         completed: false,
       });
     }
-  }, [open, initialData, newTask]);
+  }, [open, initialData]);
 
   const handleTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

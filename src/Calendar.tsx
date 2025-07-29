@@ -16,7 +16,6 @@ import {  NotificationSetting } from './types/models';
 import {  useDialogContext } from './DialogProvider';
 import { useTimeMachine } from './TimeMachineContext';
 import notificationService from './services/NotificationService';
-import eventNotificationService from './services/EventNotificationService';
 
 const DnDCalendar = withDragAndDrop<CalendarEvent, CalendarResource>(Calendar)
 const myLocalizer = momentLocalizer(moment)
@@ -175,11 +174,9 @@ export default function MyCalendar() {
         }
     };
 
-    // Aggiungi questa funzione per caricare le attività
     const fetchTasks = async () => {
         try {
             const { data } = await axiosInstance.get('/activities');
-            // Trasforma il formato data se necessario
             const formattedTasks = data.map((task: any) => ({
                 ...task,
                 startDate: new Date(task.startDate),
@@ -201,13 +198,10 @@ export default function MyCalendar() {
         setDate(currentTime);
     }, [currentTime]);
 
-    // Update to fetch tasks when currentTime changes
     useEffect(() => {
         fetchTasks();
-        // No need to fetch events on every time change, as those are displayed in the calendar
     }, [currentTime]);
 
-    // Aggiungi questa funzione per gestire il completamento delle attività
     const handleTaskCompletion = async (taskToComplete: Task, completed: boolean) => {
         try {
             await axiosInstance.patch(`/activities/${taskToComplete._id}`, { completed });
@@ -239,7 +233,6 @@ export default function MyCalendar() {
         [setMyEvents]
     )
 
-    // Funzione per trasformare le attività in eventi per il calendario
     const transformTasksToCalendarEvents = (taskList: Task[]): any[] => {
         return taskList.map(task => {
             const urgency = getTaskUrgency(task);
@@ -320,13 +313,10 @@ export default function MyCalendar() {
         }
     };
 
-    // Combina eventi normali e attività per il calendario
     const allCalendarItems = [...transformEventsForCalendar(myEvents), ...transformTasksToCalendarEvents(tasks)];
 
-    // Handle clicking on a study cycle event
     const handleStudyCycleClick = (event: CalendarEvent) => {
         if (event.studyCycleData) {
-            // Navigate to Pomodoro page with study cycle data
             navigate('/pomodoro', { 
                 state: { 
                     eventId: event._id,
@@ -335,7 +325,6 @@ export default function MyCalendar() {
                     breakTime: event.studyCycleData.breakTime,
                     totalCycles: event.studyCycleData.totalCycles,
                     completedCycles: event.studyCycleData.completedCycles || 0,
-                    // Add total time calculation for the form
                     totalTime: calculateTotalTime(event.studyCycleData)
                 } 
             });
@@ -473,22 +462,12 @@ export default function MyCalendar() {
         }
     };
 
-    // Add snooze functionality for task notifications
     const snoozeTaskNotification = (taskId: number | undefined, minutes: number = 15) => {
         if (!taskId) return;
         
-        // Generate the task tag like we do in the notifications
         const tag = `task-${taskId}`;
         
-        // Call the notification service to snooze
         notificationService.snoozeNotification(tag, minutes);
-        
-        // Provide visual feedback (optional)
-        const taskLabel = tasks.find(t => t._id === taskId)?.title;
-        if (taskLabel) {
-            // Display temporary confirmation message
-            alert(`Notifiche per "${taskLabel}" posticipate di ${minutes} minuti`);
-        }
     };
 
     // Add event listener for openEvent from notifications
@@ -508,8 +487,6 @@ export default function MyCalendar() {
         
         return () => {
             window.removeEventListener('openEvent', handleOpenEvent as EventListener);
-            // Cancel all notification schedules when component unmounts
-            eventNotificationService.cancelAllNotifications();
         };
     }, [myEvents]);
     
@@ -622,7 +599,6 @@ export default function MyCalendar() {
                     )}
                 </div>
 
-                {/* Attività da completare */}
                 <div style={{ marginBottom: '20px' }}>
                     <h3 style={{ color: '#1976d2' }}>Da completare</h3>
                     {tasks.filter(task => !task.completed && !isTaskOverdue(task)).map(task => {

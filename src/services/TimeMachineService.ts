@@ -1,5 +1,3 @@
-import eventNotificationService from './EventNotificationService';
-
 export class TimeMachineService {
   private _virtualTime: Date;
   private _usingSystemTime: boolean = true;
@@ -22,12 +20,6 @@ export class TimeMachineService {
     this._virtualTime = new Date(newTime);
     this._usingSystemTime = false;
     this.notifyListeners();
-    
-    if (Math.abs(this._virtualTime.getTime() - oldTime.getTime()) > 60000) {
-      if (typeof window !== 'undefined') {
-        eventNotificationService.cancelAllNotifications();
-      }
-    }
 
     if (typeof window !== 'undefined') {
       const event = new CustomEvent('timeMachineChanged', {
@@ -56,12 +48,6 @@ export class TimeMachineService {
     this._virtualTime = new Date();
     this._usingSystemTime = true;
     this.notifyListeners();
-    
-    if (Math.abs(this._virtualTime.getTime() - oldTime.getTime()) > 60000) {
-      if (typeof window !== 'undefined') {
-        eventNotificationService.cancelAllNotifications();
-      }
-    }
     
     return Promise.resolve();
   }

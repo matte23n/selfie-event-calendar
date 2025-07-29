@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, Fab, Zoom, Tooltip } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, Fab, Zoom, Tooltip, IconButton, Drawer, List, ListItem, ListItemText } from '@mui/material';
 import { Link, useLocation } from 'react-router';
+import MenuIcon from '@mui/icons-material/Menu';
 import TimeMachineControl from './TimeMachineControl';
 import { useAuth } from '../AuthProvider';
 import AddIcon from '@mui/icons-material/Add';
@@ -12,6 +13,7 @@ import { useDialogContext } from '../DialogProvider';
 const Navbar: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
   const [fabOpen, setFabOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
   const { setShowEventForm, setShowTaskForm, setShowStudyCycleForm } = useDialogContext();
 
@@ -38,6 +40,33 @@ const Navbar: React.FC = () => {
     setShowStudyCycleForm(true);
   };
 
+  const toggleDrawer = (open: boolean) => () => {
+    setDrawerOpen(open);
+  };
+
+  const renderMenuButtons = () => (
+    <>
+      <Button color="inherit" component={Link} to="/">
+        Home
+      </Button>
+      <Button color="inherit" component={Link} to="/calendario">
+        Calendario
+      </Button>
+      <Button color="inherit" component={Link} to="/pomodoro">
+        Pomodoro
+      </Button>
+      <Button color="inherit" component={Link} to="/note">
+        Note
+      </Button>
+      {/* <Button color="inherit" component={Link} to="/progetti">
+        Progetti
+      </Button> */}
+      <Button color="inherit" onClick={logout}>
+        Logout
+      </Button>
+    </>
+  );
+
   return (
     <>
       <AppBar position="static" sx={{ marginBottom: '10px' }}>
@@ -49,25 +78,37 @@ const Navbar: React.FC = () => {
           <Box sx={{ flexGrow: 1 }} />
           {isAuthenticated ? (
             <>
-              <Box>
-                <Button color="inherit" component={Link} to="/">
-                  Home
-                </Button>
-                <Button color="inherit" component={Link} to="/calendario">
-                  Calendario
-                </Button>
-                <Button color="inherit" component={Link} to="/pomodoro">
-                  Pomodoro
-                </Button>
-                <Button color="inherit" component={Link} to="/note">
-                  Note
-                </Button>
-                <Button color="inherit" component={Link} to="/progetti">
-                  Progetti
-                </Button>
-                <Button color="inherit" onClick={logout}>
-                  Logout
-                </Button>
+              {/* Desktop and Tablet Menu */}
+              <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                {renderMenuButtons()}
+              </Box>
+              {/* Mobile Menu */}
+              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                <IconButton color="inherit" onClick={toggleDrawer(true)}>
+                  <MenuIcon />
+                </IconButton>
+                <Drawer anchor="right" open={drawerOpen} onClose={toggleDrawer(false)}>
+                  <List>
+                    <ListItem component={Link} to="/" onClick={toggleDrawer(false)}>
+                      <ListItemText primary="Home" />
+                    </ListItem>
+                    <ListItem  component={Link} to="/calendario" onClick={toggleDrawer(false)}>
+                      <ListItemText primary="Calendario" />
+                    </ListItem>
+                    <ListItem  component={Link} to="/pomodoro" onClick={toggleDrawer(false)}>
+                      <ListItemText primary="Pomodoro" />
+                    </ListItem>
+                    <ListItem  component={Link} to="/note" onClick={toggleDrawer(false)}>
+                      <ListItemText primary="Note" />
+                    </ListItem>
+                    <ListItem  component={Link} to="/progetti" onClick={toggleDrawer(false)}>
+                      <ListItemText primary="Progetti" />
+                    </ListItem>
+                    <ListItem  onClick={() => { logout(); setDrawerOpen(false); }}>
+                      <ListItemText primary="Logout" />
+                    </ListItem>
+                  </List>
+                </Drawer>
               </Box>
             </>
           ) : (

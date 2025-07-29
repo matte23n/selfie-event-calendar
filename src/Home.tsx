@@ -24,68 +24,76 @@ function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(prev => ({ ...prev, events: true }));
-        const eventsResponse = await axiosInstance.get('/events');
-        if (eventsResponse.data && eventsResponse.data.length > 0) {
-          setEvents(eventsResponse.data.slice(0, 3));
+        // Fetch events
+        try {
+          setLoading(prev => ({ ...prev, events: true }));
+          const eventsResponse = await axiosInstance.get('/events');
+          if (eventsResponse.data && eventsResponse.data.length > 0) {
+            setEvents(eventsResponse.data.slice(0, 3));
+          }
+          setLoading(prev => ({ ...prev, events: false }));
+        } catch (error) {
+          console.error('Error fetching events:', error);
+          setLoading(prev => ({ ...prev, events: false }));
         }
-        setLoading(prev => ({ ...prev, events: false }));
-      } catch (error) {
-        console.error('Error fetching events:', error);
-        setLoading(prev => ({ ...prev, events: false }));
-      }
 
-      try {
-        setLoading(prev => ({ ...prev, notes: true }));
-        const notesResponse = await axiosInstance.get('/notes');
-        if (notesResponse.data && notesResponse.data.length > 0) {
-          const sortedNotes = notesResponse.data.sort((a: Note, b: Note) => {
-            const dateA = a.lastMod ? new Date(a.lastMod) : new Date(a.lastMod);
-            const dateB = b.lastMod ? new Date(b.lastMod) : new Date(b.lastMod);
-            return dateB.getTime() - dateA.getTime();
-          });
-          setLatestNote(sortedNotes[0]);
+        // Fetch notes
+        try {
+          setLoading(prev => ({ ...prev, notes: true }));
+          const notesResponse = await axiosInstance.get('/notes');
+          if (notesResponse.data && notesResponse.data.length > 0) {
+            const sortedNotes = notesResponse.data.sort((a: Note, b: Note) => {
+              const dateA = a.lastMod ? new Date(a.lastMod) : new Date(a.lastMod);
+              const dateB = b.lastMod ? new Date(b.lastMod) : new Date(b.lastMod);
+              return dateB.getTime() - dateA.getTime();
+            });
+            setLatestNote(sortedNotes[0]);
+          }
+          setLoading(prev => ({ ...prev, notes: false }));
+        } catch (error) {
+          console.error('Error fetching notes:', error);
+          setLoading(prev => ({ ...prev, notes: false }));
         }
-        setLoading(prev => ({ ...prev, notes: false }));
-      } catch (error) {
-        console.error('Error fetching notes:', error);
-        setLoading(prev => ({ ...prev, notes: false }));
-      }
 
-      try {
-        setLoading(prev => ({ ...prev, activities: true }));
-        const activitiesResponse = await axiosInstance.get('/activities');
-        if (activitiesResponse.data && activitiesResponse.data.length > 0) {
-          setUpcomingActivities(activitiesResponse.data.slice(0, 3));
+        // Fetch activities
+        try {
+          setLoading(prev => ({ ...prev, activities: true }));
+          const activitiesResponse = await axiosInstance.get('/activities');
+          if (activitiesResponse.data && activitiesResponse.data.length > 0) {
+            setUpcomingActivities(activitiesResponse.data.slice(0, 3));
+          }
+          setLoading(prev => ({ ...prev, activities: false }));
+        } catch (error) {
+          console.error('Error fetching activities:', error);
+          setLoading(prev => ({ ...prev, activities: false }));
         }
-        setLoading(prev => ({ ...prev, activities: false }));
-      } catch (error) {
-        console.error('Error fetching activities:', error);
-        setLoading(prev => ({ ...prev, activities: false }));
-      }
 
-      try {
-        setLoading(prev => ({ ...prev, pomodoro: true }));
-        const pomodoroResponse = await axiosInstance.get('/pomodoros/latest');
-        if (pomodoroResponse.data) {
-          setLastPomodoro(pomodoroResponse.data);
+        // Fetch pomodoro data - now using real backend API
+        try {
+          setLoading(prev => ({ ...prev, pomodoro: true }));
+          const pomodoroResponse = await axiosInstance.get('/pomodoros/latest');
+          if (pomodoroResponse.data) {
+            setLastPomodoro(pomodoroResponse.data);
+          }
+          setLoading(prev => ({ ...prev, pomodoro: false }));
+        } catch (error) {
+          console.error('Error fetching pomodoro data:', error);
+          setLoading(prev => ({ ...prev, pomodoro: false }));
         }
-        setLoading(prev => ({ ...prev, pomodoro: false }));
-      } catch (error) {
-        console.error('Error fetching pomodoro data:', error);
-        setLoading(prev => ({ ...prev, pomodoro: false }));
-      }
 
-      try {
-        setLoading(prev => ({ ...prev, projects: true }));
-        const projectsResponse = await axiosInstance.get('/projects');
-        if (projectsResponse.data && projectsResponse.data.length > 0) {
-          setProjectDeadlines(projectsResponse.data);
-        }
-        setLoading(prev => ({ ...prev, projects: false }));
+        // try {
+        //   setLoading(prev => ({ ...prev, projects: true }));
+        //   const projectsResponse = await axiosInstance.get('/projects');
+        //   if (projectsResponse.data && projectsResponse.data.length > 0) {
+        //     setProjectDeadlines(projectsResponse.data);
+        //   }
+        //   setLoading(prev => ({ ...prev, projects: false }));
+        // } catch (error) {
+        //   console.error('Error fetching project deadlines:', error);
+        //   setLoading(prev => ({ ...prev, projects: false }));
+        // }
       } catch (error) {
-        console.error('Error fetching project deadlines:', error);
-        setLoading(prev => ({ ...prev, projects: false }));
+        console.error('Error in data fetching:', error);
       }
     };
 
@@ -93,31 +101,7 @@ function Home() {
   }, [currentTime]);
 
   return (
-    <Container maxWidth="lg" className='h-screen flex flex-col items-center justify-center'>
-      <Box mb={4}>
-        <Grid container spacing={2} justifyContent="center">
-          <Grid>
-            <Button variant="contained" color="primary" component={Link} to='/calendario'>
-              Calendario
-            </Button>
-          </Grid>
-          <Grid>
-            <Button variant="contained" color="secondary" component={Link} to='/pomodoro'>
-              Pomodoro
-            </Button>
-          </Grid>
-          <Grid>
-            <Button variant="contained" color="warning" component={Link} to='/note'>
-              Note
-            </Button>
-          </Grid>
-          <Grid>
-            <Button variant="contained" color="success" component={Link} to='/progetti'>
-              Progetti
-            </Button>
-          </Grid>
-        </Grid>
-      </Box>
+    <Container maxWidth="lg" className='flex flex-col items-center justify-center'>
       <Box className='flex flex-col items-center w-full'>
         <Typography variant="h5" gutterBottom>Preview</Typography>
         <Grid container spacing={2}>
@@ -187,7 +171,7 @@ function Home() {
               </CardContent>
             </Card>
           </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
+          {/* <Grid size={{ xs: 12, md: 6 }}>
             <Card>
               <CardContent>
                 <Typography variant="h6">Project Deadlines</Typography>
@@ -204,7 +188,7 @@ function Home() {
                 )}
               </CardContent>
             </Card>
-          </Grid>
+          </Grid> */}
         </Grid>
       </Box>
     </Container>
