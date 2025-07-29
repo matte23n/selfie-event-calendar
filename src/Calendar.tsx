@@ -512,18 +512,6 @@ export default function MyCalendar() {
             eventNotificationService.cancelAllNotifications();
         };
     }, [myEvents]);
-
-    //adding notifications for events
-    function  NotifyEachMinute(){
-         //check all the events of today and notify for upcoming events
-         for(let i=0; i<myEventsArray.length; i++){
-            if((myEventsArray[i].startDate.getHours() ) == new Date().getHours() && myEventsArray[i].startDate.getMinutes()-5 <= new Date().getMinutes())
-                window.alert("the event" + myEventsArray[i].title + "will start shortly.");
-         }
-         //repeat every minute
-        setTimeout(NotifyEachMinute , (61- new Date().getSeconds()) * 1000);
-    }
-    NotifyEachMinute();
     
 
     return (
