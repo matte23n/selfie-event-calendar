@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { timeMachineService } from './services/TimeMachineService';
-import notificationService from './services/NotificationService';
 
 interface TimeMachineContextType {
   currentTime: Date;

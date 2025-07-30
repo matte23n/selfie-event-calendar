@@ -16,7 +16,6 @@ export class TimeMachineService {
   }
 
   public setTime(newTime: Date): Promise<void> {
-    const oldTime = this._virtualTime;
     this._virtualTime = new Date(newTime);
     this._usingSystemTime = false;
     this.notifyListeners();
@@ -44,7 +43,6 @@ export class TimeMachineService {
   }
 
   public resetToSystemTime(): Promise<void> {
-    const oldTime = this._virtualTime;
     this._virtualTime = new Date();
     this._usingSystemTime = true;
     this.notifyListeners();

@@ -32,7 +32,6 @@ const Pomodoro = () => {
   const [error, setError] = useState<string>('');
   const [fromCalendar, setFromCalendar] = useState(false);
   const [eventId, setEventId] = useState<string | undefined>(undefined);
-  const [initialCompletedCycles, setInitialCompletedCycles] = useState(0);
   
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
@@ -59,7 +58,6 @@ const Pomodoro = () => {
         setCycles(newCycles);
         
         setCurrentCycle(state.completedCycles || 0);
-        setInitialCompletedCycles(state.completedCycles || 0);
       }
     }
     
@@ -221,9 +219,7 @@ const Pomodoro = () => {
         
         setCountdownInterval(interval);
       }
-      
-      const notification = isStudying ? 'Study time!' : 'Break time!';
-      
+            
       setTimer(setTimeout(() => {
         setIsStudying(!isStudying);
         if (!isStudying) {

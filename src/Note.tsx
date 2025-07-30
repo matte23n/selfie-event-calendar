@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Button, Container, Grid, Box, TextField, Typography, Card, CardContent, CardActions, MenuItem, Select, Autocomplete, Chip, Menu, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, FormHelperText } from '@mui/material';
+import { Button, Container, Grid, Box, TextField, Typography, Card, CardContent, MenuItem, Select, Autocomplete, Chip, Menu, IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { marked } from 'marked';
-import axiosInstance from './api/axiosInstance'; // Import axiosInstance
+import axiosInstance from './api/axiosInstance'; 
 import { Note as NoteType } from './types/models';
 import DOMPurify from 'dompurify';
 
-// Configure marked options for safe rendering with proper heading rendering
 marked.setOptions({
-  breaks: true, // Convert line breaks to <br>
-  gfm: true, // Enable GitHub Flavored Markdown
+  breaks: true,
+  gfm: true,
 });
 
 const Note = () => {
@@ -21,9 +20,7 @@ const Note = () => {
     category: '' 
   });
   const [sortOption, setSortOption] = useState<string>('title');
-  const [sortOrder, setSortOrder] = useState<string>('asc'); // New state for sort order
-
-  // Add validation state
+  const [sortOrder, setSortOrder] = useState<string>('asc');
   const [errors, setErrors] = useState<{
     title?: string;
     content?: string;
@@ -42,39 +39,33 @@ const Note = () => {
 
   useEffect(() => {
     fetchNotes();
-  }, [sortOption, sortOrder]); // Refetch notes when sort option or order changes
+  }, [sortOption, sortOrder]);
 
   const handleSortChange = (field: string) => {
     if (sortOption === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc'); // Toggle sort order
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
       setSortOption(field);
-      setSortOrder('asc'); // Default to ascending order
+      setSortOrder('asc');
     }
   };
 
-  // Validate form before submission
   const validateForm = () => {
     const newErrors: { title?: string; content?: string } = {};
-    
     if (!newNote.title || newNote.title.trim() === '') {
       newErrors.title = 'Title is required';
     }
-    
     if (!newNote.content || newNote.content.trim() === '') {
       newErrors.content = 'Content is required';
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const addNote = async () => {
-    // Validate form before proceeding
     if (!validateForm()) {
       return;
     }
-    
     try {
       const noteToInsert: NoteType = {
         title: newNote.title || '',
@@ -87,7 +78,6 @@ const Note = () => {
       const { data } = await axiosInstance.post('/notes', noteToInsert);
       setNotes([...notes, { _id: data.insertedId, ...noteToInsert }]);
       setNewNote({ title: '', content: '', categories: [], category: '' });
-      // Clear errors after successful submission
       setErrors({});
     } catch (error) {
       console.error('Error adding note:', error);
@@ -116,11 +106,9 @@ const Note = () => {
     navigator.clipboard.writeText(content);
   };
 
-  // Add state for the menu
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedNote, setSelectedNote] = useState<NoteType | null>(null);
 
-  // Add menu handlers
   const handleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>, note: NoteType) => {
     setMenuAnchorEl(event.currentTarget);
     setSelectedNote(note);
@@ -131,13 +119,10 @@ const Note = () => {
     setSelectedNote(null);
   };
 
-  // Add state for the dialog
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedNoteForDialog, setSelectedNoteForDialog] = useState<NoteType | null>(null);
 
-  // Dialog handlers
   const handleCardClick = (note: NoteType) => (event: React.MouseEvent) => {
-    // Prevent opening dialog when clicking on the menu button
     if (!(event.target instanceof HTMLButtonElement) && 
         !event.currentTarget.querySelector('.MuiIconButton-root')?.contains(event.target as Node)) {
       setSelectedNoteForDialog(note);
@@ -150,17 +135,15 @@ const Note = () => {
     setSelectedNoteForDialog(null);
   };
 
-  // Add state to toggle between markdown preview and edit mode
   const [previewMode, setPreviewMode] = useState(false);
 
-  // Function to safely render markdown, ensuring titles with hashtags work
   const renderMarkdown = (content: string) => {
     const sanitizedHtml = DOMPurify.sanitize(
       marked(content, { async: false }),
       { 
-        ADD_ATTR: ['id'], // Allow id attributes for header anchors
-        FORBID_TAGS: ['script', 'iframe', 'form'], // Prevent dangerous tags
-        FORBID_ATTR: ['style', 'onerror', 'onload'] // Prevent dangerous attributes
+        ADD_ATTR: ['id'],
+        FORBID_TAGS: ['script', 'iframe', 'form'],
+        FORBID_ATTR: ['style', 'onerror', 'onload']
       }
     );
     return sanitizedHtml;
@@ -175,7 +158,6 @@ const Note = () => {
           value={newNote.title}
           onChange={(e) => {
             setNewNote({ ...newNote, title: e.target.value });
-            // Clear error when user starts typing
             if (errors.title && e.target.value.trim() !== '') {
               setErrors({ ...errors, title: undefined });
             }
@@ -185,8 +167,6 @@ const Note = () => {
           error={Boolean(errors.title)}
           helperText={errors.title}
         />
-        
-        {/* Add a toggle for preview mode */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
           <Typography variant="subtitle1">Content (Markdown supported)</Typography>
           <Button 
@@ -196,9 +176,7 @@ const Note = () => {
             {previewMode ? 'Edit' : 'Preview'}
           </Button>
         </Box>
-        
         {previewMode ? (
-          // Markdown preview - Updated to use the safe rendering function
           <Box 
             sx={{ 
               border: '1px solid #ccc', 
@@ -229,13 +207,11 @@ const Note = () => {
             )}
           </Box>
         ) : (
-          // Edit mode
           <TextField
             label="Content"
             value={newNote.content}
             onChange={(e) => {
               setNewNote({ ...newNote, content: e.target.value });
-              // Clear error when user starts typing
               if (errors.content && e.target.value.trim() !== '') {
                 setErrors({ ...errors, content: undefined });
               }
@@ -249,7 +225,6 @@ const Note = () => {
             placeholder="# Title\n\n**Bold text** and *italic text*\n\n- List item\n- Another item\n\n1. Numbered item\n2. Second item\n\n```\nCode block\n```"
           />
         )}
-        
         <Autocomplete
           multiple
           freeSolo
@@ -288,7 +263,6 @@ const Note = () => {
           </Select>
         </Box>
       </Box>
-      
       <Grid container spacing={2}>
         {notes.map(note => (
           <Grid key={note._id} size={{ xs: 12, sm: 6, md: 4 }}>
@@ -313,7 +287,7 @@ const Note = () => {
                     aria-label="more actions" 
                     size="small"
                     onClick={(event) => {
-                      event.stopPropagation(); // Prevent card click when clicking menu
+                      event.stopPropagation();
                       handleMenuOpen(event, note);
                     }}
                   >
@@ -352,7 +326,6 @@ const Note = () => {
                     },
                   }}
                 >
-                  {/* Render markdown as HTML */}
                   <div 
                     className="markdown-card-content"
                     dangerouslySetInnerHTML={{ 
@@ -390,8 +363,6 @@ const Note = () => {
           </Grid>
         ))}
       </Grid>
-      
-      {/* Menu for note actions */}
       <Menu
         anchorEl={menuAnchorEl}
         open={Boolean(menuAnchorEl)}
@@ -422,8 +393,6 @@ const Note = () => {
           Copy Content
         </MenuItem>
       </Menu>
-      
-      {/* Dialog for full note content with markdown - update to use renderMarkdown */}
       <Dialog
         open={dialogOpen}
         onClose={handleDialogClose}

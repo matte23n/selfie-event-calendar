@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router';
-import { Button, Container, Grid, Box, Typography, Card, CardContent } from '@mui/material';
+import { Container, Grid, Box, Typography, Card, CardContent } from '@mui/material';
 import axiosInstance from './api/axiosInstance';
-import { Event, Note, Activity, Pomodoro, Project } from './types/models';
+import { Event, Note, Activity, Pomodoro } from './types/models';
 import { useTimeMachine } from './TimeMachineContext';
 
 function Home() {
@@ -10,7 +9,6 @@ function Home() {
   const [latestNote, setLatestNote] = useState<Note | null>(null);
   const [upcomingActivities, setUpcomingActivities] = useState<Activity[]>([]);
   const [lastPomodoro, setLastPomodoro] = useState<Pomodoro | null>(null);
-  const [projectDeadlines, setProjectDeadlines] = useState<Project[]>([]);
   const [loading, setLoading] = useState({
     events: true,
     notes: true,
@@ -80,18 +78,6 @@ function Home() {
           console.error('Error fetching pomodoro data:', error);
           setLoading(prev => ({ ...prev, pomodoro: false }));
         }
-
-        // try {
-        //   setLoading(prev => ({ ...prev, projects: true }));
-        //   const projectsResponse = await axiosInstance.get('/projects');
-        //   if (projectsResponse.data && projectsResponse.data.length > 0) {
-        //     setProjectDeadlines(projectsResponse.data);
-        //   }
-        //   setLoading(prev => ({ ...prev, projects: false }));
-        // } catch (error) {
-        //   console.error('Error fetching project deadlines:', error);
-        //   setLoading(prev => ({ ...prev, projects: false }));
-        // }
       } catch (error) {
         console.error('Error in data fetching:', error);
       }

@@ -109,9 +109,6 @@ class NotificationService {
           });
           
           const placeholderNotification = {
-            close: () => {
-              console.log('Closing push notification placeholder');
-            },
             data: options.data,
             onclick: null
           } as unknown as Notification;
